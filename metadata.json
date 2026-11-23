@@ -1,0 +1,6 @@
+{
+  "name": "Laboratorio de Prompts",
+  "description": "Aplicación web educativa universitaria para formular, evaluar críticamente y refinar iterativamente prompts de IA mediante indagación y metacognición.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
