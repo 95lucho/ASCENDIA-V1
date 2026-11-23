@@ -1,18 +1,21 @@
 import { useState } from "react";
 import {
   ArrowRight,
-  Check,
   CheckCircle2,
   Clock,
-  Copy,
   Download,
+  Lock,
   RotateCcw,
 } from "lucide-react";
 import { CHALLENGES } from "../data/challenges";
 import { getChallengeStatus } from "../hooks/useLabStorage";
 import { LabStorageState } from "../types/lab";
 import {
-  exportPortfolioMarkdown,
+  canExportPortfolioPdf,
+  downloadPortfolioPdf,
+} from "../utils/portfolioPdf";
+import { STRUCTURED_CHALLENGE_IDS } from "../utils/progression";
+import {
   formatDateTimeEs,
   formatEvaluationAnswer,
 } from "../utils/promptBuilder";
@@ -30,8 +33,11 @@ export function PortfolioView({
   onResetAll,
 }: PortfolioViewProps) {
   const [selectedFilterId, setSelectedFilterId] = useState<string>("all");
-  const [copiedMd, setCopiedMd] = useState(false);
-  const [copyError, setCopyError] = useState(false);
+  const [pdfFeedback, setPdfFeedback] = useState<{
+    filename: string;
+    pageCount: number;
+  } | null>(null);
+  const [pdfError, setPdfError] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const completedCount = CHALLENGES.filter(
@@ -45,9 +51,14 @@ export function PortfolioView({
     0
   );
 
+  const mandatoryCompletedCount = STRUCTURED_CHALLENGE_IDS.filter((id) =>
+    Boolean(state.challenges[id]?.completed)
+  ).length;
+  const canDownloadPdf = canExportPortfolioPdf(state.challenges);
+
   const challengesWithActivity = CHALLENGES.filter((c) => {
     const p = state.challenges[c.id];
-    return p && (p.versions.length > 0 || p.completed);
+    return p && (p.versions.length > 0 || p.completed || Boolean(p.activityResult));
   });
 
   const visibleChallenges =
@@ -55,33 +66,19 @@ export function PortfolioView({
       ? challengesWithActivity
       : challengesWithActivity.filter((c) => c.id === selectedFilterId);
 
-  const handleCopyMarkdown = async () => {
-    const md = exportPortfolioMarkdown(state, CHALLENGES);
-    setCopyError(false);
+  const handleDownloadPdf = () => {
+    if (!canDownloadPdf) return;
+    setPdfError(false);
     try {
-      await navigator.clipboard.writeText(md);
-      setCopiedMd(true);
-      setTimeout(() => setCopiedMd(false), 2000);
+      const result = downloadPortfolioPdf(state, CHALLENGES);
+      setPdfFeedback({
+        filename: result.filename,
+        pageCount: result.pageCount,
+      });
     } catch {
-      setCopiedMd(false);
-      setCopyError(true);
+      setPdfFeedback(null);
+      setPdfError(true);
     }
-  };
-
-  const handleDownloadMarkdown = () => {
-    const md = exportPortfolioMarkdown(state, CHALLENGES);
-    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const slug = (state.studentName.trim() || "estudiante")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-");
-    a.href = url;
-    a.download = `bitacora-prompts-${slug}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -93,13 +90,30 @@ export function PortfolioView({
             Bitácora de aprendizaje
           </h1>
           <p className="mt-1.5 text-sm text-slate-600 dark:text-[#CBD5E1] max-w-2xl">
-            Tu historial personal de pruebas con IA: qué instrucción probaste,
-            qué respondió la IA, cómo la evaluaste y qué aprendiste en cada
-            intento.
+            Tu historial personal de aprendizaje y pruebas: resultados de los
+            seis retos obligatorios y registros opcionales del Reto Libre.
           </p>
-          {copyError && (
-            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-              No se pudo acceder al portapapeles automático. Usa “Descargar bitácora (.md)” para guardar tu historial.
+          {!canDownloadPdf ? (
+            <p className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-300">
+              Completa los 6 retos obligatorios para habilitar la descarga de tu
+              bitácora en PDF ({mandatoryCompletedCount} de 6 completados). El
+              Reto Libre es opcional.
+            </p>
+          ) : (
+            <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              Secuencia obligatoria completada (6 de 6). Tu bitácora PDF A4
+              está lista para descargar.
+            </p>
+          )}
+          {pdfFeedback && (
+            <p className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+              Descarga iniciada: <strong>{pdfFeedback.filename}</strong> (
+              {pdfFeedback.pageCount} páginas, formato A4).
+            </p>
+          )}
+          {pdfError && (
+            <p className="mt-1.5 text-xs text-red-700 dark:text-red-300">
+              No se pudo generar el documento PDF. Intenta nuevamente.
             </p>
           )}
         </div>
@@ -107,34 +121,25 @@ export function PortfolioView({
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
-            onClick={handleCopyMarkdown}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-white dark:bg-[#1E293B] hover:bg-[#F5F7FA] dark:hover:bg-[#334155]/60 border border-[#CBD5E1] dark:border-[#334155] text-[#1E3A5F] dark:text-[#F1F5F9] rounded-lg transition-colors whitespace-nowrap shrink-0"
+            onClick={handleDownloadPdf}
+            disabled={!canDownloadPdf}
+            title={
+              canDownloadPdf
+                ? "Descargar tu bitácora completa en formato PDF A4"
+                : `Completa los 6 retos obligatorios para habilitar la descarga (${mandatoryCompletedCount} de 6)`
+            }
+            className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-bold tracking-wide rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+              canDownloadPdf
+                ? "bg-[#1E3A5F] dark:bg-[#2B4F7E] hover:bg-[#152B47] dark:hover:bg-[#356199] text-white cursor-pointer shadow-sm"
+                : "bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-[#CBD5E1] dark:border-[#334155] cursor-not-allowed"
+            }`}
           >
-            {copiedMd ? (
-              <>
-                <Check
-                  className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400"
-                  aria-hidden="true"
-                />
-                <span className="text-emerald-700 dark:text-emerald-400">
-                  Markdown copiado
-                </span>
-              </>
+            {canDownloadPdf ? (
+              <Download className="w-4 h-4" aria-hidden="true" />
             ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Copiar Markdown</span>
-              </>
+              <Lock className="w-4 h-4" aria-hidden="true" />
             )}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDownloadMarkdown}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-[#1E3A5F] dark:bg-[#2B4F7E] hover:bg-[#152B47] dark:hover:bg-[#356199] text-white rounded-lg transition-colors whitespace-nowrap shrink-0"
-          >
-            <Download className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Descargar bitácora (.md)</span>
+            <span>DESCARGAR MI BITÁCORA PDF</span>
           </button>
 
           {confirmReset ? (
@@ -147,6 +152,7 @@ export function PortfolioView({
                 onClick={() => {
                   onResetAll();
                   setConfirmReset(false);
+                  setPdfFeedback(null);
                 }}
                 className="text-xs font-semibold text-red-700 dark:text-red-300 underline"
               >
@@ -185,12 +191,12 @@ export function PortfolioView({
         </div>
         <div className="p-5">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            Retos completados
+            Retos obligatorios
           </p>
           <p className="mt-1 text-2xl font-bold text-[#1E3A5F] dark:text-[#60A5FA] tabular-nums">
-            {completedCount}{" "}
+            {mandatoryCompletedCount}{" "}
             <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
-              / {CHALLENGES.length}
+              / 6
             </span>
           </p>
         </div>
@@ -204,7 +210,7 @@ export function PortfolioView({
         </div>
         <div className="p-5">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            Pruebas guardadas
+            Total completados ({completedCount}) / Pruebas
           </p>
           <p className="mt-1 text-2xl font-bold text-[#1E3A5F] dark:text-[#F1F5F9] tabular-nums">
             {totalVersions}
@@ -247,11 +253,12 @@ export function PortfolioView({
       {visibleChallenges.length === 0 ? (
         <section className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] rounded-xl p-10 text-center space-y-3">
           <h2 className="text-lg font-semibold text-[#1E3A5F] dark:text-[#F1F5F9]">
-            Aún no hay iteraciones registradas en tu bitácora
+            Aún no hay registros en tu bitácora
           </h2>
           <p className="text-sm text-slate-600 dark:text-[#CBD5E1] max-w-md mx-auto">
-            Abre un reto desde el Banco de Retos, redacta los bloques del
-            prompt, prueba la respuesta y guarda tu primera evaluación crítica.
+            Abre un reto desde el Banco de Retos, completa la actividad
+            correspondiente o experimenta en el Reto Libre para guardar tus
+            resultados aquí.
           </p>
           <div className="pt-2">
             <button
