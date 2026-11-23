@@ -394,7 +394,7 @@ export function Navbar({
                       className="w-4 h-4 text-[#1E3A5F] dark:text-[#60A5FA] shrink-0"
                       aria-hidden="true"
                     />
-                    <span className="flex-1">Cambiar Nombre / Perfil</span>
+                    <span className="flex-1">Cambiar Nombre</span>
                   </button>
 
                   <button

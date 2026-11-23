@@ -72,6 +72,8 @@ export interface DiagnosticState {
 }
 
 export interface LabStorageState {
+  schemaVersion: number;
+  lastSavedAt?: string;
   studentName: string;
   hasSeenGuide: boolean;
   diagnostic: DiagnosticState;

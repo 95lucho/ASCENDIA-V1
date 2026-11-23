@@ -29,6 +29,7 @@ export function PortfolioView({
 }: PortfolioViewProps) {
   const [selectedFilterId, setSelectedFilterId] = useState<string>("all");
   const [copiedMd, setCopiedMd] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const completedCount = CHALLENGES.filter(
@@ -54,12 +55,14 @@ export function PortfolioView({
 
   const handleCopyMarkdown = async () => {
     const md = exportPortfolioMarkdown(state, CHALLENGES);
+    setCopyError(false);
     try {
       await navigator.clipboard.writeText(md);
       setCopiedMd(true);
       setTimeout(() => setCopiedMd(false), 2000);
     } catch {
       setCopiedMd(false);
+      setCopyError(true);
     }
   };
 
@@ -91,6 +94,11 @@ export function PortfolioView({
             Registro trazable de tus versiones de prompts, auditorías críticas y
             evidencias de mejora para entrega o autoevaluación académica.
           </p>
+          {copyError && (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+              No se pudo acceder al portapapeles automático. Usa “Descargar reporte (.md)” para guardar tu portafolio.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">

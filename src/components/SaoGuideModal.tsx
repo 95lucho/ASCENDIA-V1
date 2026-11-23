@@ -173,6 +173,11 @@ export function SaoGuideModal({
                 type="text"
                 value={studentName}
                 onChange={(e) => onStudentNameChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setStep(2);
+                  }
+                }}
                 placeholder="Ej. María Fernanda López"
                 maxLength={60}
                 autoFocus
