@@ -1,8 +1,12 @@
-export type LabView = "inicio" | "retos" | "mesa" | "bitacora";
+export type LabView = "inicio" | "retos" | "mesa" | "constructor" | "bitacora";
 
 export type ChallengeLevel = "Básico" | "Intermedio" | "Avanzado" | "Libre";
 
-export type ChallengeStatus = "Pendiente" | "En iteración" | "Completado";
+export type ChallengeStatus =
+  | "Disponible"
+  | "En progreso"
+  | "Completado"
+  | "Bloqueado";
 
 export interface PromptBlocks {
   rol: string;
@@ -23,11 +27,18 @@ export interface ChallengeDefinition {
   criterios: string[];
   placeholders: PromptBlocks;
   esLibre?: boolean;
+  secuencia?: string[];
+  competencia?: string;
 }
 
-export type ComplianceRating = "si" | "parcial" | "no";
-export type HallucinationRating = "ninguno" | "menores" | "graves";
-export type FitRating = "adecuado" | "ajustar";
+export type SimpleEvaluationRating = "si" | "parcial" | "no";
+export type ComplianceRating = SimpleEvaluationRating;
+export type HallucinationRating =
+  | SimpleEvaluationRating
+  | "ninguno"
+  | "menores"
+  | "graves";
+export type FitRating = SimpleEvaluationRating | "adecuado" | "ajustar";
 
 export interface CriticalEvaluation {
   cumplioRestricciones: ComplianceRating | "";
@@ -35,6 +46,11 @@ export interface CriticalEvaluation {
   nivelYFormatoAdecuados: FitRating | "";
   criteriosVerificados: boolean[];
   notasReflexion: string;
+  aspectosPositivos?: string;
+  erroresOLimitaciones?: string;
+  informacionAVerificar?: string;
+  cambiosInstruccion?: string;
+  justificacionModificaciones?: string;
 }
 
 export interface IterationVersion {
@@ -43,8 +59,11 @@ export interface IterationVersion {
   createdAt: string;
   blocks: PromptBlocks;
   assembledPrompt: string;
+  executedPrompt?: string;
   aiResponse: string;
   sourceMode: "live_gemini" | "manual";
+  aiProvider?: string;
+  aiModel?: string;
   evaluation: CriticalEvaluation;
 }
 
@@ -53,16 +72,41 @@ export interface CustomChallengeMeta {
   objetivo: string;
 }
 
+export interface ChallengeActivityResult {
+  approved: boolean;
+  score: number;
+  maxScore: number;
+  resultLabel: string;
+  competence: string;
+  saoMessage: string;
+  feedbackSummary: string;
+  evaluatedAt: string;
+}
+
 export interface ChallengeProgress {
   challengeId: string;
   completed: boolean;
   completedAt?: string;
   customMeta?: CustomChallengeMeta;
   draftBlocks: PromptBlocks;
+  draftExecutedPrompt?: string;
   draftResponse: string;
   draftSourceMode: "live_gemini" | "manual";
+  draftProvider?: string;
+  draftModel?: string;
   draftEvaluation: CriticalEvaluation;
   versions: IterationVersion[];
+  activityState?: Record<string, unknown>;
+  activityResult?: ChallengeActivityResult;
+}
+
+export interface ConstructorDraft {
+  blocks: PromptBlocks;
+  executedPrompt?: string;
+  response: string;
+  sourceMode: "live_gemini" | "manual";
+  provider?: string;
+  model?: string;
 }
 
 export interface DiagnosticState {
@@ -79,6 +123,7 @@ export interface LabStorageState {
   diagnostic: DiagnosticState;
   activeChallengeId: string;
   challenges: Record<string, ChallengeProgress>;
+  constructorDraft?: ConstructorDraft;
 }
 
 export interface CompletenessCheck {

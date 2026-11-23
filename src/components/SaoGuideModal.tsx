@@ -47,7 +47,7 @@ export function SaoGuideModal({
       aria-labelledby="sao-guide-title"
       className="fixed inset-0 z-50 bg-[#0F172A]/60 dark:bg-black/75 flex items-center justify-center p-4"
     >
-      <div className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] rounded-2xl max-w-2xl w-full overflow-hidden shadow-xl">
+      <div className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] border-t-4 border-t-[#1E3A5F] dark:border-t-[#60A5FA] rounded-2xl max-w-2xl w-full overflow-hidden shadow-xl">
         {/* Cabecera de paso y botón Saltar guía */}
         <div className="flex items-center justify-between gap-4 px-6 py-3.5 bg-[#F5F7FA] dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-[#334155]">
           <div className="flex items-center gap-3 text-xs font-semibold text-[#1E3A5F] dark:text-[#F1F5F9]">
@@ -57,7 +57,7 @@ export function SaoGuideModal({
             <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">
               ·
             </span>
-            <span>Guía inicial con SAO</span>
+            <span>Guía inicial con SAÓ</span>
           </div>
 
           <button
@@ -69,7 +69,7 @@ export function SaoGuideModal({
           </button>
         </div>
 
-        {/* Contenido principal con Avatar SAO flotante */}
+        {/* Contenido principal con Avatar SAÓ flotante */}
         <div className="p-6 sm:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <div className="shrink-0 flex flex-col items-center">
@@ -77,7 +77,7 @@ export function SaoGuideModal({
                 <SaoAvatar floating className="w-32 sm:w-36" />
               </div>
               <span className="mt-2 font-mono text-[11px] font-semibold text-[#1E3A5F] dark:text-[#60A5FA]">
-                SAO · Guía de ASCENDIA
+                SAÓ · Guía de ASCENDIA
               </span>
             </div>
 
@@ -88,10 +88,10 @@ export function SaoGuideModal({
                     id="sao-guide-title"
                     className="text-xl sm:text-2xl font-bold text-[#1E3A5F] dark:text-[#F1F5F9]"
                   >
-                    ¡Hola! Soy SAO, tu guía en ASCENDIA
+                    ¡Hola! Soy SAÓ, tu guía en ASCENDIA
                   </h2>
                   <p className="text-sm text-[#1E293B] dark:text-[#CBD5E1] leading-relaxed">
-                    ¡Bienvenido a ASCENDIA! Soy SAO y voy a acompañarte en este
+                    ¡Bienvenido a ASCENDIA! Soy SAÓ y voy a acompañarte en este
                     espacio diseñado para que aprendas a comunicarte con
                     criterio y precisión con sistemas de inteligencia artificial.
                     Aquí no buscamos que la IA haga el trabajo por ti, sino que

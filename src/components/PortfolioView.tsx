@@ -14,7 +14,9 @@ import { LabStorageState } from "../types/lab";
 import {
   exportPortfolioMarkdown,
   formatDateTimeEs,
+  formatEvaluationAnswer,
 } from "../utils/promptBuilder";
+import { AiResponseRenderer } from "./workbench/AiResponseRenderer";
 
 interface PortfolioViewProps {
   state: LabStorageState;
@@ -36,7 +38,7 @@ export function PortfolioView({
     (c) => getChallengeStatus(state.challenges[c.id]) === "Completado"
   ).length;
   const iteratingCount = CHALLENGES.filter(
-    (c) => getChallengeStatus(state.challenges[c.id]) === "En iteración"
+    (c) => getChallengeStatus(state.challenges[c.id]) === "En progreso"
   ).length;
   const totalVersions = CHALLENGES.reduce(
     (acc, c) => acc + (state.challenges[c.id]?.versions.length ?? 0),
@@ -88,15 +90,16 @@ export function PortfolioView({
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#1E3A5F] dark:text-[#F1F5F9]">
-            Bitácora de Progreso y Portafolio Metacognitivo
+            Bitácora de aprendizaje
           </h1>
           <p className="mt-1.5 text-sm text-slate-600 dark:text-[#CBD5E1] max-w-2xl">
-            Registro trazable de tus versiones de prompts, auditorías críticas y
-            evidencias de mejora para entrega o autoevaluación académica.
+            Tu historial personal de pruebas con IA: qué instrucción probaste,
+            qué respondió la IA, cómo la evaluaste y qué aprendiste en cada
+            intento.
           </p>
           {copyError && (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-              No se pudo acceder al portapapeles automático. Usa “Descargar reporte (.md)” para guardar tu portafolio.
+              No se pudo acceder al portapapeles automático. Usa “Descargar bitácora (.md)” para guardar tu historial.
             </p>
           )}
         </div>
@@ -131,7 +134,7 @@ export function PortfolioView({
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-[#1E3A5F] dark:bg-[#2B4F7E] hover:bg-[#152B47] dark:hover:bg-[#356199] text-white rounded-lg transition-colors whitespace-nowrap shrink-0"
           >
             <Download className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Descargar reporte (.md)</span>
+            <span>Descargar bitácora (.md)</span>
           </button>
 
           {confirmReset ? (
@@ -171,7 +174,7 @@ export function PortfolioView({
       </div>
 
       {/* Tira de indicadores académicos */}
-      <section className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] rounded-xl grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-[#E2E8F0] dark:divide-[#334155]">
+      <section className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] border-t-4 border-t-[#1E3A5F] dark:border-t-[#60A5FA] rounded-xl grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-[#E2E8F0] dark:divide-[#334155]">
         <div className="p-5">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
             Estudiante
@@ -193,7 +196,7 @@ export function PortfolioView({
         </div>
         <div className="p-5">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            Retos en iteración
+            Retos en práctica
           </p>
           <p className="mt-1 text-2xl font-bold text-[#8B1E24] dark:text-[#F87171] tabular-nums">
             {iteratingCount}
@@ -201,7 +204,7 @@ export function PortfolioView({
         </div>
         <div className="p-5">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            Versiones documentadas
+            Pruebas guardadas
           </p>
           <p className="mt-1 text-2xl font-bold text-[#1E3A5F] dark:text-[#F1F5F9] tabular-nums">
             {totalVersions}
@@ -313,80 +316,190 @@ export function PortfolioView({
                   </button>
                 </div>
 
-                {/* Versiones registradas */}
-                <div className="space-y-4">
-                  {progress.versions.map((ver) => (
-                    <article
-                      key={ver.id}
-                      className="bg-[#F5F7FA] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] rounded-lg p-4 space-y-3"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <span className="font-mono font-semibold text-[#1E3A5F] dark:text-[#60A5FA] tabular-nums">
-                          Versión {ver.versionNumber}
-                        </span>
-                        <span className="text-slate-500 dark:text-slate-400">
-                          {formatDateTimeEs(ver.createdAt)}
-                          <span aria-hidden="true" className="mx-1.5">
-                            ·
-                          </span>
-                          {ver.sourceMode === "live_gemini"
-                            ? "IA en vivo"
-                            : "Pegado manual"}
-                        </span>
-                      </div>
+                {/* Resultado de actividad evaluada (Retos 1–6) */}
+                {progress.activityResult && (
+                  <div className="bg-[#F5F7FA] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] rounded-lg p-4 space-y-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-mono font-semibold text-[#1E3A5F] dark:text-[#60A5FA]">
+                        Actividad evaluada ·{" "}
+                        {progress.activityResult.approved
+                          ? "Aprobado"
+                          : "En práctica"}
+                      </span>
+                      <span className="text-slate-500 dark:text-slate-400">
+                        {formatDateTimeEs(progress.activityResult.evaluatedAt)}
+                      </span>
+                    </div>
+                    <p className="text-[#0F172A] dark:text-[#F1F5F9]">
+                      <strong>Resultado obtenido:</strong>{" "}
+                      {progress.activityResult.resultLabel}
+                    </p>
+                    <p className="text-[#1E293B] dark:text-[#CBD5E1]">
+                      <strong>Competencia desarrollada:</strong>{" "}
+                      {progress.activityResult.competence}
+                    </p>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      {progress.activityResult.feedbackSummary}
+                    </p>
+                  </div>
+                )}
 
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                            Prompt ensamblado
-                          </p>
-                          <pre className="font-mono text-xs text-[#1E293B] dark:text-[#E2E8F0] bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] rounded p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
-                            {ver.assembledPrompt}
-                          </pre>
+                {/* Pruebas registradas en la bitácora */}
+                <div className="space-y-4">
+                  {progress.versions.map((ver) => {
+                    const promptUsed =
+                      ver.executedPrompt?.trim() || ver.assembledPrompt;
+                    const providerBadge = [
+                      ver.aiProvider?.trim(),
+                      ver.aiModel?.trim(),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
+                    const ev = ver.evaluation;
+
+                    return (
+                      <article
+                        key={ver.id}
+                        className="bg-[#F5F7FA] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] rounded-lg p-4 space-y-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="font-mono font-semibold text-[#1E3A5F] dark:text-[#60A5FA] tabular-nums">
+                            Prueba {ver.versionNumber}
+                          </span>
+                          <span className="text-slate-500 dark:text-slate-400">
+                            {formatDateTimeEs(ver.createdAt)}
+                            <span aria-hidden="true" className="mx-1.5">
+                              ·
+                            </span>
+                            {providerBadge ||
+                              (ver.sourceMode === "live_gemini"
+                                ? "Prueba directa"
+                                : "Prueba externa")}
+                          </span>
                         </div>
 
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                              Respuesta analizada
-                            </p>
-                            <div className="text-xs text-slate-700 dark:text-[#CBD5E1] bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] rounded p-3 whitespace-pre-wrap max-h-28 overflow-y-auto">
-                              {ver.aiResponse}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                Instrucción utilizada
+                              </p>
+                              <pre className="font-mono text-xs text-[#1E293B] dark:text-[#E2E8F0] bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] rounded p-3 whitespace-pre-wrap max-h-56 overflow-y-auto">
+                                {promptUsed}
+                              </pre>
+                            </div>
+
+                            <div className="bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] rounded-lg p-3.5 space-y-2.5 text-xs">
+                              <p className="font-semibold text-[#1E3A5F] dark:text-[#60A5FA]">
+                                Evaluación de la respuesta
+                              </p>
+                              <ul className="space-y-1 text-slate-600 dark:text-[#CBD5E1]">
+                                <li>
+                                  ¿Respondió lo que pediste?:{" "}
+                                  <strong className="text-[#0F172A] dark:text-[#F1F5F9]">
+                                    {formatEvaluationAnswer(
+                                      ev.cumplioRestricciones,
+                                      1
+                                    )}
+                                  </strong>
+                                </li>
+                                <li>
+                                  ¿Fue clara y fácil de entender?:{" "}
+                                  <strong className="text-[#0F172A] dark:text-[#F1F5F9]">
+                                    {formatEvaluationAnswer(
+                                      ev.alucinacionesOSesgos,
+                                      2
+                                    )}
+                                  </strong>
+                                </li>
+                                <li>
+                                  ¿Incluyó lo que necesitabas?:{" "}
+                                  <strong className="text-[#0F172A] dark:text-[#F1F5F9]">
+                                    {formatEvaluationAnswer(
+                                      ev.nivelYFormatoAdecuados,
+                                      3
+                                    )}
+                                  </strong>
+                                </li>
+                              </ul>
+
+                              {ev.cambiosInstruccion?.trim() && (
+                                <div className="pt-2 border-t border-[#E2E8F0] dark:border-[#334155]">
+                                  <p className="font-semibold text-[#1E3A5F] dark:text-[#93C5FD]">
+                                    ¿Qué cambiaría en mi instrucción?
+                                  </p>
+                                  <p className="mt-0.5 text-[#1E293B] dark:text-[#CBD5E1] leading-relaxed">
+                                    {ev.cambiosInstruccion}
+                                  </p>
+                                </div>
+                              )}
+
+                              {ev.notasReflexion?.trim() && (
+                                <div className="pt-2 border-t border-[#E2E8F0] dark:border-[#334155]">
+                                  <p className="font-semibold text-[#8B1E24] dark:text-[#FCA5A5]">
+                                    ¿Qué aprendí de esta prueba?
+                                  </p>
+                                  <p className="mt-0.5 text-[#1E293B] dark:text-[#CBD5E1] leading-relaxed">
+                                    {ev.notasReflexion}
+                                  </p>
+                                </div>
+                              )}
+
+                              {(ev.aspectosPositivos?.trim() ||
+                                ev.erroresOLimitaciones?.trim() ||
+                                ev.informacionAVerificar?.trim() ||
+                                ev.justificacionModificaciones?.trim()) && (
+                                <div className="pt-2 border-t border-[#E2E8F0] dark:border-[#334155] space-y-1 text-slate-600 dark:text-slate-400">
+                                  <p className="font-semibold text-slate-500 dark:text-slate-400">
+                                    Notas anteriores conservadas
+                                  </p>
+                                  {ev.aspectosPositivos?.trim() && (
+                                    <p>
+                                      <strong>Aspectos positivos:</strong>{" "}
+                                      {ev.aspectosPositivos}
+                                    </p>
+                                  )}
+                                  {ev.erroresOLimitaciones?.trim() && (
+                                    <p>
+                                      <strong>Errores o limitaciones:</strong>{" "}
+                                      {ev.erroresOLimitaciones}
+                                    </p>
+                                  )}
+                                  {ev.informacionAVerificar?.trim() && (
+                                    <p>
+                                      <strong>Información a verificar:</strong>{" "}
+                                      {ev.informacionAVerificar}
+                                    </p>
+                                  )}
+                                  {ev.justificacionModificaciones?.trim() && (
+                                    <p>
+                                      <strong>Justificación:</strong>{" "}
+                                      {ev.justificacionModificaciones}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          <div className="bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] rounded p-3 space-y-1.5">
-                            <p className="text-xs font-semibold text-[#1E3A5F] dark:text-[#60A5FA]">
-                              Diagnóstico y reflexión metacognitiva
-                            </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              Restricciones:{" "}
-                              <span className="font-medium text-slate-800 dark:text-[#F1F5F9]">
-                                {ver.evaluation.cumplioRestricciones || "N/A"}
-                              </span>
-                              <span aria-hidden="true" className="mx-1.5">
-                                ·
-                              </span>
-                              Alucinaciones/sesgos:{" "}
-                              <span className="font-medium text-slate-800 dark:text-[#F1F5F9]">
-                                {ver.evaluation.alucinacionesOSesgos || "N/A"}
-                              </span>
-                              <span aria-hidden="true" className="mx-1.5">
-                                ·
-                              </span>
-                              Nivel/formato:{" "}
-                              <span className="font-medium text-slate-800 dark:text-[#F1F5F9]">
-                                {ver.evaluation.nivelYFormatoAdecuados || "N/A"}
-                              </span>
-                            </p>
-                            <p className="text-xs text-[#1E293B] dark:text-[#CBD5E1] leading-relaxed">
-                              {ver.evaluation.notasReflexion}
-                            </p>
-                          </div>
+                          <AiResponseRenderer
+                            title="Respuesta generada por la IA"
+                            responseText={ver.aiResponse}
+                            provider={
+                              ver.aiProvider ||
+                              (ver.sourceMode === "live_gemini"
+                                ? "Google Gemini"
+                                : "Prueba externa")
+                            }
+                            model={ver.aiModel}
+                            sourceMode={ver.sourceMode}
+                            compact
+                            maxHeightClass="max-h-72"
+                          />
                         </div>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    );
+                  })}
                 </div>
               </section>
             );

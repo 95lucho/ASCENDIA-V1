@@ -31,9 +31,12 @@ async function startServer() {
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/api/health", (_req, res) => {
+    const geminiAvailable = hasConfiguredGeminiKey();
     res.json({
       ok: true,
-      geminiAvailable: hasConfiguredGeminiKey(),
+      geminiAvailable,
+      provider: geminiAvailable ? "Google Gemini" : undefined,
+      model: geminiAvailable ? "gemini-4-hydrogen" : undefined,
     });
   });
 
@@ -58,22 +61,53 @@ async function startServer() {
 
     try {
       const ai = getGeminiClient();
-      const response = await ai.models.generateContent({
-        model: "gemini-4-hydrogen",
-        contents: prompt.trim(),
-      });
+      const candidateModels = ["gemini-4-hydrogen", "gemini-3.1-flash-lite"];
+      let outputText = "";
+      let usedModel = candidateModels[0];
+      let lastError: unknown = null;
 
-      const outputText = response.text?.trim();
+      for (const candidateModel of candidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model: candidateModel,
+            contents: prompt.trim(),
+          });
+          const text = response.text?.trim() ?? "";
+          if (text) {
+            outputText = text;
+            usedModel = candidateModel;
+            lastError = null;
+            break;
+          }
+        } catch (err: unknown) {
+          lastError = err;
+          const msg = err instanceof Error ? err.message : String(err);
+          const isTransientUnavailable =
+            msg.includes("503") ||
+            msg.toUpperCase().includes("UNAVAILABLE") ||
+            msg.toLowerCase().includes("high demand");
+          if (!isTransientUnavailable) {
+            throw err;
+          }
+        }
+      }
+
+      if (lastError) {
+        throw lastError;
+      }
+
       if (!outputText) {
         res.status(502).json({
-          error: "El modelo devolvió una respuesta vacía. Intenta precisar mejor la tarea o pega una salida externa.",
+          error:
+            "El modelo devolvió una respuesta vacía. Intenta precisar mejor la tarea o utiliza la Modalidad B (Prueba externa).",
         });
         return;
       }
 
       res.json({
         text: outputText,
-        model: "gemini-4-hydrogen",
+        provider: "Google Gemini",
+        model: usedModel,
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

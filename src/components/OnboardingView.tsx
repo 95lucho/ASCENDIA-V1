@@ -67,21 +67,21 @@ export function OnboardingView({
 
   return (
     <div className="space-y-10">
-      {/* Encabezado introductorio con Emblema SAO */}
-      <section className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] rounded-xl p-6 sm:p-8 lg:p-10 transition-colors">
+      {/* Encabezado introductorio con Emblema SAÓ */}
+      <section className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] border-t-4 border-t-[#1E3A5F] dark:border-t-[#60A5FA] rounded-xl p-6 sm:p-8 lg:p-10 transition-colors">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6 max-w-3xl">
             <button
               type="button"
               onClick={onOpenGuide}
-              title="Abrir Guía de SAO"
+              title="Abrir Guía de SAÓ"
               className="shrink-0 self-start sm:self-center bg-[#F5F7FA] dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-[#334155]/60 border border-[#E2E8F0] dark:border-[#334155] rounded-xl p-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA]"
             >
               <SaoAvatar floating className="w-28 sm:w-32" />
             </button>
             <div className="space-y-3">
               <p className="text-xs font-semibold text-[#8B1E24] dark:text-[#F87171]">
-                ASCENDIA · Indagación y metacognición en Ciencias de la Educación
+                ASCENDIA · UAGRM · Indagación y metacognición en Ciencias de la Educación
               </p>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E3A5F] dark:text-[#F1F5F9]">
                 {greetingName
@@ -114,7 +114,7 @@ export function OnboardingView({
                 className="w-4 h-4 text-[#8B1E24] dark:text-[#F87171]"
                 aria-hidden="true"
               />
-              <span>Guía de SAO</span>
+              <span>Guía de SAÓ</span>
             </button>
           </div>
         </div>

@@ -1,20 +1,17 @@
 import {
   AlertCircle,
+  BookOpenCheck,
   CheckCircle2,
   FileCheck2,
   RotateCcw,
   Save,
 } from "lucide-react";
 import {
-  ChallengeDefinition,
-  ComplianceRating,
   CriticalEvaluation,
-  FitRating,
-  HallucinationRating,
+  SimpleEvaluationRating,
 } from "../../types/lab";
 
 interface CriticalEvaluationPanelProps {
-  challenge: ChallengeDefinition;
   evaluation: CriticalEvaluation;
   currentVersionNumber: number;
   completed: boolean;
@@ -24,181 +21,193 @@ interface CriticalEvaluationPanelProps {
     field: K,
     value: CriticalEvaluation[K]
   ) => void;
-  onToggleCriterion: (index: number) => void;
   onSaveIteration: () => void;
   onMarkComplete: () => void;
   onReopenChallenge: () => void;
   onGoToPortfolio: () => void;
 }
 
+const SIMPLE_OPTIONS: { value: SimpleEvaluationRating; label: string }[] = [
+  { value: "si", label: "Sí." },
+  { value: "parcial", label: "Parcialmente." },
+  { value: "no", label: "No." },
+];
+
 export function CriticalEvaluationPanel({
-  challenge,
   evaluation,
   currentVersionNumber,
   completed,
   validationError,
   actionSuccess,
   onUpdateField,
-  onToggleCriterion,
   onSaveIteration,
   onMarkComplete,
   onReopenChallenge,
   onGoToPortfolio,
 }: CriticalEvaluationPanelProps) {
   return (
-    <div className="pt-5 border-t border-[#E2E8F0] dark:border-[#334155] space-y-5">
-      <div>
-        <h2 className="text-lg font-bold text-[#1E3A5F] dark:text-[#F1F5F9]">
-          Evaluación Crítica y Bitácora (Obligatorio)
-        </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Audita la salida antes de crear la siguiente versión o cerrar el reto.
-        </p>
-      </div>
-
-      {/* Pregunta 1 */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-[#0F172A] dark:text-[#F1F5F9]">
-          1. ¿Cumplió con las restricciones y el rol asignado?
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { value: "si", label: "Sí, totalmente" },
-              { value: "parcial", label: "Parcialmente" },
-              { value: "no", label: "No cumplió" },
-            ] as { value: ComplianceRating; label: string }[]
-          ).map((opt) => {
-            const active = evaluation.cumplioRestricciones === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onUpdateField("cumplioRestricciones", opt.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                  active
-                    ? "bg-[#1E3A5F] dark:bg-[#2B4F7E] border-[#1E3A5F] dark:border-[#60A5FA] text-white"
-                    : "bg-white dark:bg-[#0F172A] border-[#CBD5E1] dark:border-[#334155] text-[#1E293B] dark:text-[#CBD5E1] hover:border-[#8B1E24] dark:hover:border-[#60A5FA]"
-                }`}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
+    <div className="pt-5 border-t border-[#E2E8F0] dark:border-[#334155] space-y-6">
+      {/* Paso 3: Evalúo el resultado */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-[#1E3A5F] dark:text-[#F1F5F9]">
+            <span className="font-mono text-sm text-[#8B1E24] dark:text-[#F87171] mr-1.5">
+              3.
+            </span>
+            Evalúo el resultado
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Responde estas tres preguntas sencillas sobre la respuesta que
+            recibiste.
+          </p>
         </div>
-      </div>
 
-      {/* Pregunta 2 */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-[#0F172A] dark:text-[#F1F5F9]">
-          2. ¿Detectaste alucinaciones, citas inventadas, sesgos o errores
-          conceptuales?
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { value: "ninguno", label: "Sin errores detectados" },
-              { value: "menores", label: "Imprecisiones menores" },
-              { value: "graves", label: "Alucinaciones / sesgos graves" },
-            ] as { value: HallucinationRating; label: string }[]
-          ).map((opt) => {
-            const active = evaluation.alucinacionesOSesgos === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onUpdateField("alucinacionesOSesgos", opt.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                  active
-                    ? "bg-[#1E3A5F] dark:bg-[#2B4F7E] border-[#1E3A5F] dark:border-[#60A5FA] text-white"
-                    : "bg-white dark:bg-[#0F172A] border-[#CBD5E1] dark:border-[#334155] text-[#1E293B] dark:text-[#CBD5E1] hover:border-[#8B1E24] dark:hover:border-[#60A5FA]"
-                }`}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Pregunta 3 */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-[#0F172A] dark:text-[#F1F5F9]">
-          3. ¿El nivel académico y formato de salida son adecuados para tu
-          propósito?
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { value: "adecuado", label: "Adecuado al propósito" },
-              { value: "ajustar", label: "Requiere ajuste" },
-            ] as { value: FitRating; label: string }[]
-          ).map((opt) => {
-            const active = evaluation.nivelYFormatoAdecuados === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() =>
-                  onUpdateField("nivelYFormatoAdecuados", opt.value)
-                }
-                className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                  active
-                    ? "bg-[#1E3A5F] dark:bg-[#2B4F7E] border-[#1E3A5F] dark:border-[#60A5FA] text-white"
-                    : "bg-white dark:bg-[#0F172A] border-[#CBD5E1] dark:border-[#334155] text-[#1E293B] dark:text-[#CBD5E1] hover:border-[#8B1E24] dark:hover:border-[#60A5FA]"
-                }`}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Lista de cotejo de verificación crítica */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-[#0F172A] dark:text-[#F1F5F9]">
-          Criterios de verificación del reto
-        </p>
+        {/* Pregunta 1 */}
         <div className="space-y-2">
-          {challenge.criterios.map((crit, idx) => {
-            const checked = Boolean(evaluation.criteriosVerificados[idx]);
-            return (
-              <label
-                key={idx}
-                className="flex items-start gap-2.5 p-2.5 rounded-lg border border-[#E2E8F0] dark:border-[#334155] bg-[#F5F7FA] dark:bg-[#0F172A] hover:bg-white dark:hover:bg-[#334155]/40 cursor-pointer transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => onToggleCriterion(idx)}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[#8B1E24] focus:ring-[#1E3A5F]"
-                />
-                <span className="text-xs text-[#0F172A] dark:text-[#CBD5E1] leading-snug">
-                  {crit}
-                </span>
-              </label>
-            );
-          })}
+          <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9]">
+            1. ¿La IA respondió lo que le pediste?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {SIMPLE_OPTIONS.map((opt) => {
+              const active = evaluation.cumplioRestricciones === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    onUpdateField("cumplioRestricciones", opt.value)
+                  }
+                  className={`px-3.5 py-1.5 text-xs sm:text-sm font-medium rounded-lg border transition-colors ${
+                    active
+                      ? "bg-[#1E3A5F] dark:bg-[#2B4F7E] border-[#1E3A5F] dark:border-[#60A5FA] text-white"
+                      : "bg-white dark:bg-[#0F172A] border-[#CBD5E1] dark:border-[#334155] text-[#1E293B] dark:text-[#CBD5E1] hover:border-[#8B1E24] dark:hover:border-[#60A5FA]"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Pregunta 2 */}
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9]">
+            2. ¿La respuesta fue clara y fácil de entender?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {SIMPLE_OPTIONS.map((opt) => {
+              const active = evaluation.alucinacionesOSesgos === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    onUpdateField("alucinacionesOSesgos", opt.value)
+                  }
+                  className={`px-3.5 py-1.5 text-xs sm:text-sm font-medium rounded-lg border transition-colors ${
+                    active
+                      ? "bg-[#1E3A5F] dark:bg-[#2B4F7E] border-[#1E3A5F] dark:border-[#60A5FA] text-white"
+                      : "bg-white dark:bg-[#0F172A] border-[#CBD5E1] dark:border-[#334155] text-[#1E293B] dark:text-[#CBD5E1] hover:border-[#8B1E24] dark:hover:border-[#60A5FA]"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Pregunta 3 */}
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9]">
+            3. ¿La respuesta incluyó lo que necesitabas?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {SIMPLE_OPTIONS.map((opt) => {
+              const active = evaluation.nivelYFormatoAdecuados === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    onUpdateField("nivelYFormatoAdecuados", opt.value)
+                  }
+                  className={`px-3.5 py-1.5 text-xs sm:text-sm font-medium rounded-lg border transition-colors ${
+                    active
+                      ? "bg-[#1E3A5F] dark:bg-[#2B4F7E] border-[#1E3A5F] dark:border-[#60A5FA] text-white"
+                      : "bg-white dark:bg-[#0F172A] border-[#CBD5E1] dark:border-[#334155] text-[#1E293B] dark:text-[#CBD5E1] hover:border-[#8B1E24] dark:hover:border-[#60A5FA]"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Notas de bitácora */}
-      <div>
+      {/* Paso 4: Escribo qué cambiaría */}
+      <div className="pt-4 border-t border-[#E2E8F0] dark:border-[#334155] space-y-2">
+        <h3 className="text-base font-bold text-[#1E3A5F] dark:text-[#F1F5F9]">
+          <span className="font-mono text-xs text-[#8B1E24] dark:text-[#F87171] mr-1.5">
+            4.
+          </span>
+          Escribo qué cambiaría
+        </h3>
         <label
-          htmlFor="reflection-notes"
-          className="block text-xs font-semibold text-[#0F172A] dark:text-[#F1F5F9] mb-1.5"
+          htmlFor="prompt-improvement-input"
+          className="block text-sm font-medium text-[#0F172A] dark:text-[#F1F5F9]"
         >
-          Bitácora de hallazgos y plan de refinamiento
+          ¿Qué cambiarías en tu instrucción para obtener una mejor respuesta?
         </label>
         <textarea
-          id="reflection-notes"
-          rows={3}
-          value={evaluation.notasReflexion}
-          onChange={(e) => onUpdateField("notasReflexion", e.target.value)}
-          placeholder="¿Qué falló o quedó superficial? ¿Qué contrastaste con tus apuntes/fuentes reales y qué ajustarás en la siguiente versión?"
+          id="prompt-improvement-input"
+          rows={2}
+          value={evaluation.cambiosInstruccion ?? ""}
+          onChange={(e) => onUpdateField("cambiosInstruccion", e.target.value)}
+          placeholder="Ej. Pedir ejemplos más concretos, especificar el nivel de los estudiantes o indicar cómo quiero la lista..."
           className="w-full px-3.5 py-2.5 text-sm text-[#0F172A] dark:text-[#F1F5F9] bg-[#F5F7FA] dark:bg-[#0F172A] border border-[#CBD5E1] dark:border-[#334155] rounded-lg placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-[#0F172A] focus:border-[#1E3A5F] dark:focus:border-[#60A5FA] focus:outline-none transition-colors resize-y"
         />
+      </div>
+
+      {/* Paso 5: Registro lo que aprendí (Bitácora) */}
+      <div className="pt-4 border-t border-[#E2E8F0] dark:border-[#334155] space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-bold text-[#1E3A5F] dark:text-[#F1F5F9]">
+            <span className="font-mono text-xs text-[#8B1E24] dark:text-[#F87171] mr-1.5">
+              5.
+            </span>
+            Registro lo que aprendí
+          </h3>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            <BookOpenCheck className="w-3.5 h-3.5 text-[#1E3A5F] dark:text-[#60A5FA]" aria-hidden="true" />
+            <span>Se guarda en tu bitácora</span>
+          </span>
+        </div>
+
+        <label
+          htmlFor="learning-reflection-input"
+          className="block text-sm font-medium text-[#0F172A] dark:text-[#F1F5F9]"
+        >
+          ¿Qué aprendiste de esta prueba?
+        </label>
+        <textarea
+          id="learning-reflection-input"
+          rows={2}
+          value={evaluation.notasReflexion}
+          onChange={(e) => onUpdateField("notasReflexion", e.target.value)}
+          placeholder="Ej. Aprendí que cuando doy más contexto y digo qué formato quiero, la IA responde con mayor claridad..."
+          className="w-full px-3.5 py-2.5 text-sm text-[#0F172A] dark:text-[#F1F5F9] bg-[#F5F7FA] dark:bg-[#0F172A] border border-[#CBD5E1] dark:border-[#334155] rounded-lg placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-[#0F172A] focus:border-[#1E3A5F] dark:focus:border-[#60A5FA] focus:outline-none transition-colors resize-y"
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Al guardar, ASCENDIA registra automáticamente la fecha, tu
+          instrucción, la respuesta de la IA, el sistema utilizado y tu
+          evaluación en la Bitácora.
+        </p>
       </div>
 
       {validationError && (
@@ -236,7 +245,7 @@ export function CriticalEvaluationPanel({
         </div>
       )}
 
-      {/* Botones de iteración y cierre */}
+      {/* Botones para guardar en bitácora y completar el reto */}
       <div className="flex flex-col sm:flex-row gap-3 pt-1">
         <button
           type="button"
@@ -245,8 +254,7 @@ export function CriticalEvaluationPanel({
         >
           <Save className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span className="tabular-nums">
-            Guardar v{currentVersionNumber} y refinar (v
-            {currentVersionNumber + 1})
+            Guardar en bitácora y mejorar (v{currentVersionNumber + 1})
           </span>
         </button>
 
@@ -266,7 +274,7 @@ export function CriticalEvaluationPanel({
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1E3A5F] dark:bg-[#2B4F7E] hover:bg-[#152B47] dark:hover:bg-[#356199] text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
           >
             <FileCheck2 className="w-4 h-4 shrink-0" aria-hidden="true" />
-            <span>Marcar como Completado</span>
+            <span>Guardar y completar reto</span>
           </button>
         )}
       </div>

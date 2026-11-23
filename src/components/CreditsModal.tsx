@@ -27,7 +27,7 @@ export function CreditsModal({ open, onClose }: CreditsModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] rounded-xl max-w-lg w-full overflow-hidden shadow-lg"
+        className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] border-t-4 border-t-[#8B1E24] dark:border-t-[#C93B44] rounded-xl max-w-lg w-full overflow-hidden shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[#E2E8F0] dark:border-[#334155] bg-[#F5F7FA] dark:bg-[#0F172A]">

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CHALLENGES, EMPTY_BLOCKS } from "../data/challenges";
 import {
+  ChallengeActivityResult,
   ChallengeProgress,
   ChallengeStatus,
   ComplianceRating,
+  ConstructorDraft,
   CriticalEvaluation,
   CustomChallengeMeta,
   FitRating,
@@ -13,18 +15,40 @@ import {
   PromptBlocks,
 } from "../types/lab";
 import { assemblePrompt } from "../utils/promptBuilder";
+import {
+  hasChallengeProgressStarted,
+  isChallengeUnlocked,
+} from "../utils/progression";
 
 const STORAGE_KEY = "laboratorio_prompts_state_v1";
-export const LAB_SCHEMA_VERSION = 1;
+export const LAB_SCHEMA_VERSION = 2;
 
 const VALID_COMPLIANCE: ReadonlySet<string> = new Set(["si", "parcial", "no", ""]);
 const VALID_HALLUCINATION: ReadonlySet<string> = new Set([
+  "si",
+  "parcial",
+  "no",
   "ninguno",
   "menores",
   "graves",
   "",
 ]);
-const VALID_FIT: ReadonlySet<string> = new Set(["adecuado", "ajustar", ""]);
+const VALID_FIT: ReadonlySet<string> = new Set([
+  "si",
+  "parcial",
+  "no",
+  "adecuado",
+  "ajustar",
+  "",
+]);
+
+function createEmptyConstructorDraft(): ConstructorDraft {
+  return {
+    blocks: { ...EMPTY_BLOCKS },
+    response: "",
+    sourceMode: "manual",
+  };
+}
 
 function sanitizeBlocks(raw: unknown): PromptBlocks {
   if (!raw || typeof raw !== "object") {
@@ -47,6 +71,11 @@ function createEmptyEvaluation(criteriaCount: number): CriticalEvaluation {
     nivelYFormatoAdecuados: "",
     criteriosVerificados: Array.from({ length: criteriaCount }, () => false),
     notasReflexion: "",
+    aspectosPositivos: "",
+    erroresOLimitaciones: "",
+    informacionAVerificar: "",
+    cambiosInstruccion: "",
+    justificacionModificaciones: "",
   };
 }
 
@@ -76,7 +105,10 @@ function sanitizeEvaluation(
 
   const verified = Array.isArray(obj.criteriosVerificados)
     ? Array.from({ length: criteriaCount }, (_, idx) =>
-        Boolean(obj.criteriosVerificados && (obj.criteriosVerificados as unknown[])[idx])
+        Boolean(
+          obj.criteriosVerificados &&
+            (obj.criteriosVerificados as unknown[])[idx]
+        )
       )
     : base.criteriosVerificados;
 
@@ -87,6 +119,22 @@ function sanitizeEvaluation(
     criteriosVerificados: verified,
     notasReflexion:
       typeof obj.notasReflexion === "string" ? obj.notasReflexion : "",
+    aspectosPositivos:
+      typeof obj.aspectosPositivos === "string" ? obj.aspectosPositivos : "",
+    erroresOLimitaciones:
+      typeof obj.erroresOLimitaciones === "string"
+        ? obj.erroresOLimitaciones
+        : "",
+    informacionAVerificar:
+      typeof obj.informacionAVerificar === "string"
+        ? obj.informacionAVerificar
+        : "",
+    cambiosInstruccion:
+      typeof obj.cambiosInstruccion === "string" ? obj.cambiosInstruccion : "",
+    justificacionModificaciones:
+      typeof obj.justificacionModificaciones === "string"
+        ? obj.justificacionModificaciones
+        : "",
   };
 }
 
@@ -123,13 +171,72 @@ function sanitizeVersions(
         typeof obj.assembledPrompt === "string"
           ? obj.assembledPrompt
           : assemblePrompt(blocks),
+      executedPrompt:
+        typeof obj.executedPrompt === "string" ? obj.executedPrompt : undefined,
       aiResponse: typeof obj.aiResponse === "string" ? obj.aiResponse : "",
       sourceMode: obj.sourceMode === "live_gemini" ? "live_gemini" : "manual",
+      aiProvider:
+        typeof obj.aiProvider === "string" ? obj.aiProvider : undefined,
+      aiModel: typeof obj.aiModel === "string" ? obj.aiModel : undefined,
       evaluation: sanitizeEvaluation(obj.evaluation, criteriaCount),
     });
   }
 
   return valid;
+}
+
+function sanitizeActivityResult(
+  raw: unknown
+): ChallengeActivityResult | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  if (
+    typeof obj.approved !== "boolean" ||
+    typeof obj.score !== "number" ||
+    typeof obj.maxScore !== "number"
+  ) {
+    return undefined;
+  }
+  return {
+    approved: obj.approved,
+    score: obj.score,
+    maxScore: obj.maxScore,
+    resultLabel:
+      typeof obj.resultLabel === "string"
+        ? obj.resultLabel
+        : `${obj.score} de ${obj.maxScore}`,
+    competence: typeof obj.competence === "string" ? obj.competence : "",
+    saoMessage: typeof obj.saoMessage === "string" ? obj.saoMessage : "",
+    feedbackSummary:
+      typeof obj.feedbackSummary === "string" ? obj.feedbackSummary : "",
+    evaluatedAt:
+      typeof obj.evaluatedAt === "string" && obj.evaluatedAt
+        ? obj.evaluatedAt
+        : new Date().toISOString(),
+  };
+}
+
+function sanitizeActivityState(
+  raw: unknown
+): Record<string, unknown> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  return raw as Record<string, unknown>;
+}
+
+function sanitizeConstructorDraft(raw: unknown): ConstructorDraft {
+  if (!raw || typeof raw !== "object") {
+    return createEmptyConstructorDraft();
+  }
+  const obj = raw as Record<string, unknown>;
+  return {
+    blocks: sanitizeBlocks(obj.blocks),
+    executedPrompt:
+      typeof obj.executedPrompt === "string" ? obj.executedPrompt : undefined,
+    response: typeof obj.response === "string" ? obj.response : "",
+    sourceMode: obj.sourceMode === "live_gemini" ? "live_gemini" : "manual",
+    provider: typeof obj.provider === "string" ? obj.provider : undefined,
+    model: typeof obj.model === "string" ? obj.model : undefined,
+  };
 }
 
 function createInitialChallengeProgress(challengeId: string): ChallengeProgress {
@@ -162,6 +269,107 @@ function createInitialState(): LabStorageState {
     },
     activeChallengeId: CHALLENGES[0].id,
     challenges,
+    constructorDraft: createEmptyConstructorDraft(),
+  };
+}
+
+export function migrateLabStorageState(
+  rawParsed: unknown
+): LabStorageState {
+  const fallback = createInitialState();
+  if (!rawParsed || typeof rawParsed !== "object") return fallback;
+
+  const parsed = rawParsed as Partial<LabStorageState>;
+  const mergedChallenges: Record<string, ChallengeProgress> = {
+    ...fallback.challenges,
+  };
+
+  if (parsed.challenges && typeof parsed.challenges === "object") {
+    for (const ch of CHALLENGES) {
+      const saved = parsed.challenges[ch.id];
+      if (saved && typeof saved === "object") {
+        const base = createInitialChallengeProgress(ch.id);
+        const customMeta =
+          saved.customMeta && typeof saved.customMeta === "object"
+            ? {
+                title:
+                  typeof saved.customMeta.title === "string"
+                    ? saved.customMeta.title
+                    : "",
+                objetivo:
+                  typeof saved.customMeta.objetivo === "string"
+                    ? saved.customMeta.objetivo
+                    : "",
+              }
+            : undefined;
+
+        mergedChallenges[ch.id] = {
+          ...base,
+          challengeId: ch.id,
+          completed: Boolean(saved.completed),
+          completedAt:
+            typeof saved.completedAt === "string"
+              ? saved.completedAt
+              : undefined,
+          customMeta,
+          draftBlocks: sanitizeBlocks(saved.draftBlocks),
+          draftExecutedPrompt:
+            typeof saved.draftExecutedPrompt === "string"
+              ? saved.draftExecutedPrompt
+              : undefined,
+          draftResponse:
+            typeof saved.draftResponse === "string" ? saved.draftResponse : "",
+          draftSourceMode:
+            saved.draftSourceMode === "live_gemini" ? "live_gemini" : "manual",
+          draftProvider:
+            typeof saved.draftProvider === "string"
+              ? saved.draftProvider
+              : undefined,
+          draftModel:
+            typeof saved.draftModel === "string" ? saved.draftModel : undefined,
+          draftEvaluation: sanitizeEvaluation(
+            saved.draftEvaluation,
+            ch.criterios.length
+          ),
+          versions: sanitizeVersions(
+            saved.versions,
+            ch.id,
+            ch.criterios.length
+          ),
+          activityState: sanitizeActivityState(saved.activityState),
+          activityResult: sanitizeActivityResult(saved.activityResult),
+        };
+      }
+    }
+  }
+
+  const selectedIds = Array.isArray(parsed.diagnostic?.selectedIds)
+    ? parsed.diagnostic.selectedIds.filter(
+        (id): id is string => typeof id === "string"
+      )
+    : [];
+
+  return {
+    schemaVersion: LAB_SCHEMA_VERSION,
+    lastSavedAt:
+      typeof parsed.lastSavedAt === "string" ? parsed.lastSavedAt : undefined,
+    studentName:
+      typeof parsed.studentName === "string" ? parsed.studentName : "",
+    hasSeenGuide:
+      typeof parsed.hasSeenGuide === "boolean" ? parsed.hasSeenGuide : false,
+    diagnostic: {
+      selectedIds,
+      validated: Boolean(parsed.diagnostic?.validated),
+      isPerfect: Boolean(parsed.diagnostic?.isPerfect),
+    },
+    activeChallengeId:
+      typeof parsed.activeChallengeId === "string" &&
+      mergedChallenges[parsed.activeChallengeId] &&
+      isChallengeUnlocked(parsed.activeChallengeId, mergedChallenges)
+        ? parsed.activeChallengeId
+        : fallback.activeChallengeId,
+    challenges: mergedChallenges,
+    constructorDraft: sanitizeConstructorDraft(parsed.constructorDraft),
   };
 }
 
@@ -172,99 +380,20 @@ function loadStateFromStorage(): LabStorageState {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
-
-    const parsed = JSON.parse(raw) as Partial<LabStorageState> | null;
-    if (!parsed || typeof parsed !== "object") return fallback;
-
-    const mergedChallenges: Record<string, ChallengeProgress> = {
-      ...fallback.challenges,
-    };
-
-    if (parsed.challenges && typeof parsed.challenges === "object") {
-      for (const ch of CHALLENGES) {
-        const saved = parsed.challenges[ch.id];
-        if (saved && typeof saved === "object") {
-          const base = createInitialChallengeProgress(ch.id);
-          const customMeta =
-            saved.customMeta && typeof saved.customMeta === "object"
-              ? {
-                  title:
-                    typeof saved.customMeta.title === "string"
-                      ? saved.customMeta.title
-                      : "",
-                  objetivo:
-                    typeof saved.customMeta.objetivo === "string"
-                      ? saved.customMeta.objetivo
-                      : "",
-                }
-              : undefined;
-
-          mergedChallenges[ch.id] = {
-            ...base,
-            challengeId: ch.id,
-            completed: Boolean(saved.completed),
-            completedAt:
-              typeof saved.completedAt === "string"
-                ? saved.completedAt
-                : undefined,
-            customMeta,
-            draftBlocks: sanitizeBlocks(saved.draftBlocks),
-            draftResponse:
-              typeof saved.draftResponse === "string" ? saved.draftResponse : "",
-            draftSourceMode:
-              saved.draftSourceMode === "live_gemini" ? "live_gemini" : "manual",
-            draftEvaluation: sanitizeEvaluation(
-              saved.draftEvaluation,
-              ch.criterios.length
-            ),
-            versions: sanitizeVersions(
-              saved.versions,
-              ch.id,
-              ch.criterios.length
-            ),
-          };
-        }
-      }
-    }
-
-    const selectedIds = Array.isArray(parsed.diagnostic?.selectedIds)
-      ? parsed.diagnostic.selectedIds.filter(
-          (id): id is string => typeof id === "string"
-        )
-      : [];
-
-    return {
-      schemaVersion: LAB_SCHEMA_VERSION,
-      lastSavedAt:
-        typeof parsed.lastSavedAt === "string" ? parsed.lastSavedAt : undefined,
-      studentName: typeof parsed.studentName === "string" ? parsed.studentName : "",
-      hasSeenGuide:
-        typeof parsed.hasSeenGuide === "boolean" ? parsed.hasSeenGuide : false,
-      diagnostic: {
-        selectedIds,
-        validated: Boolean(parsed.diagnostic?.validated),
-        isPerfect: Boolean(parsed.diagnostic?.isPerfect),
-      },
-      activeChallengeId:
-        typeof parsed.activeChallengeId === "string" &&
-        mergedChallenges[parsed.activeChallengeId]
-          ? parsed.activeChallengeId
-          : fallback.activeChallengeId,
-      challenges: mergedChallenges,
-    };
+    const parsed = JSON.parse(raw) as unknown;
+    return migrateLabStorageState(parsed);
   } catch {
     return fallback;
   }
 }
 
-export function getChallengeStatus(progress?: ChallengeProgress): ChallengeStatus {
-  if (!progress) return "Pendiente";
-  if (progress.completed) return "Completado";
-  if (progress.versions.length > 0) return "En iteración";
-  const hasAnyDraft =
-    Object.values(progress.draftBlocks).some((v) => v.trim().length > 0) ||
-    progress.draftResponse.trim().length > 0;
-  return hasAnyDraft ? "En iteración" : "Pendiente";
+export function getChallengeStatus(
+  progress?: ChallengeProgress,
+  isUnlocked = true
+): ChallengeStatus {
+  if (progress?.completed) return "Completado";
+  if (!isUnlocked) return "Bloqueado";
+  return hasChallengeProgressStarted(progress) ? "En progreso" : "Disponible";
 }
 
 export function useLabStorage() {
@@ -296,7 +425,15 @@ export function useLabStorage() {
   }, []);
 
   const setActiveChallengeId = useCallback((activeChallengeId: string) => {
-    setState((prev) => ({ ...prev, activeChallengeId }));
+    setState((prev) => {
+      if (
+        !prev.challenges[activeChallengeId] ||
+        !isChallengeUnlocked(activeChallengeId, prev.challenges)
+      ) {
+        return prev;
+      }
+      return { ...prev, activeChallengeId };
+    });
   }, []);
 
   const updateDiagnostic = useCallback(
@@ -344,12 +481,45 @@ export function useLabStorage() {
     (
       challengeId: string,
       draftResponse: string,
-      draftSourceMode?: "live_gemini" | "manual"
+      draftSourceMode?: "live_gemini" | "manual",
+      meta?: { provider?: string; model?: string; executedPrompt?: string }
     ) => {
       updateChallengeProgress(challengeId, (curr) => ({
         ...curr,
         draftResponse,
         draftSourceMode: draftSourceMode ?? curr.draftSourceMode,
+        draftProvider:
+          meta && "provider" in meta ? meta.provider : curr.draftProvider,
+        draftModel: meta && "model" in meta ? meta.model : curr.draftModel,
+        draftExecutedPrompt:
+          meta && "executedPrompt" in meta
+            ? meta.executedPrompt
+            : curr.draftExecutedPrompt,
+      }));
+    },
+    [updateChallengeProgress]
+  );
+
+  const updateDraftExecutionMeta = useCallback(
+    (
+      challengeId: string,
+      meta: {
+        executedPrompt?: string;
+        provider?: string;
+        model?: string;
+        sourceMode?: "live_gemini" | "manual";
+      }
+    ) => {
+      updateChallengeProgress(challengeId, (curr) => ({
+        ...curr,
+        draftExecutedPrompt:
+          "executedPrompt" in meta
+            ? meta.executedPrompt
+            : curr.draftExecutedPrompt,
+        draftProvider:
+          "provider" in meta ? meta.provider : curr.draftProvider,
+        draftModel: "model" in meta ? meta.model : curr.draftModel,
+        draftSourceMode: meta.sourceMode ?? curr.draftSourceMode,
       }));
     },
     [updateChallengeProgress]
@@ -391,14 +561,21 @@ export function useLabStorage() {
         stateRef.current.challenges[challengeId] ??
         createInitialChallengeProgress(challengeId);
       const nextNumber = currentProgress.versions.length + 1;
+      const assembled = assemblePrompt(currentProgress.draftBlocks);
+      const executed =
+        currentProgress.draftExecutedPrompt?.trim() || assembled;
+
       const version: IterationVersion = {
         id: `${challengeId}-v${nextNumber}-${Date.now()}`,
         versionNumber: nextNumber,
         createdAt: new Date().toISOString(),
         blocks: { ...currentProgress.draftBlocks },
-        assembledPrompt: assemblePrompt(currentProgress.draftBlocks),
+        assembledPrompt: assembled,
+        executedPrompt: executed,
         aiResponse: currentProgress.draftResponse,
         sourceMode: currentProgress.draftSourceMode,
+        aiProvider: currentProgress.draftProvider?.trim() || undefined,
+        aiModel: currentProgress.draftModel?.trim() || undefined,
         evaluation: {
           ...currentProgress.draftEvaluation,
           criteriosVerificados: [
@@ -412,10 +589,11 @@ export function useLabStorage() {
         return {
           ...curr,
           versions: [...curr.versions, version],
-          // Conserva los bloques para facilitar el refinamiento en la versión siguiente,
-          // pero limpia la respuesta y notas de evaluación para la nueva prueba.
+          draftExecutedPrompt: undefined,
           draftResponse: "",
           draftSourceMode: "manual",
+          draftProvider: undefined,
+          draftModel: undefined,
           draftEvaluation: {
             ...createEmptyEvaluation(criteriaCount),
             criteriosVerificados: [...curr.draftEvaluation.criteriosVerificados],
@@ -434,7 +612,11 @@ export function useLabStorage() {
         let versions = curr.versions;
         if (saveCurrentDraftAsVersion) {
           const assembled = assemblePrompt(curr.draftBlocks);
-          if (assembled.trim().length > 0 || curr.draftResponse.trim().length > 0) {
+          const executed = curr.draftExecutedPrompt?.trim() || assembled;
+          if (
+            executed.trim().length > 0 ||
+            curr.draftResponse.trim().length > 0
+          ) {
             const nextNumber = curr.versions.length + 1;
             const version: IterationVersion = {
               id: `${challengeId}-v${nextNumber}-${Date.now()}`,
@@ -442,8 +624,11 @@ export function useLabStorage() {
               createdAt: new Date().toISOString(),
               blocks: { ...curr.draftBlocks },
               assembledPrompt: assembled,
+              executedPrompt: executed,
               aiResponse: curr.draftResponse,
               sourceMode: curr.draftSourceMode,
+              aiProvider: curr.draftProvider?.trim() || undefined,
+              aiModel: curr.draftModel?.trim() || undefined,
               evaluation: {
                 ...curr.draftEvaluation,
                 criteriosVerificados: [
@@ -458,7 +643,46 @@ export function useLabStorage() {
           ...curr,
           versions,
           completed: true,
-          completedAt: new Date().toISOString(),
+          completedAt: curr.completedAt ?? new Date().toISOString(),
+        };
+      });
+    },
+    [updateChallengeProgress]
+  );
+
+  const updateChallengeActivityState = useCallback(
+    (challengeId: string, activityState: Record<string, unknown>) => {
+      updateChallengeProgress(challengeId, (curr) => ({
+        ...curr,
+        activityState,
+      }));
+    },
+    [updateChallengeProgress]
+  );
+
+  const saveChallengeActivityAttempt = useCallback(
+    (
+      challengeId: string,
+      activityState: Record<string, unknown>,
+      result: ChallengeActivityResult
+    ) => {
+      updateChallengeProgress(challengeId, (curr) => {
+        // Si el reto ya estaba aprobado previamente, no degradar ni borrar el
+        // resultado aprobado anterior cuando el estudiante practica un reintento.
+        const preservePreviousApproved =
+          curr.completed && !result.approved && curr.activityResult?.approved;
+
+        return {
+          ...curr,
+          activityState,
+          activityResult: preservePreviousApproved
+            ? curr.activityResult
+            : result,
+          completed: curr.completed || result.approved,
+          completedAt:
+            curr.completed || result.approved
+              ? curr.completedAt ?? result.evaluatedAt
+              : curr.completedAt,
         };
       });
     },
@@ -475,13 +699,39 @@ export function useLabStorage() {
     [updateChallengeProgress]
   );
 
+  const prepareChallengeRetry = useCallback(
+    (challengeId: string) => {
+      updateChallengeProgress(challengeId, (curr) => {
+        const criteriaCount = curr.draftEvaluation.criteriosVerificados.length;
+        return {
+          ...curr,
+          // Conserva completed, completedAt, activityResult aprobado y versions
+          activityState: undefined,
+          draftExecutedPrompt: undefined,
+          draftResponse: "",
+          draftSourceMode: "manual",
+          draftProvider: undefined,
+          draftModel: undefined,
+          draftEvaluation: {
+            ...createEmptyEvaluation(criteriaCount),
+            criteriosVerificados: [...curr.draftEvaluation.criteriosVerificados],
+          },
+        };
+      });
+    },
+    [updateChallengeProgress]
+  );
+
   const loadVersionIntoDraft = useCallback(
     (challengeId: string, version: IterationVersion) => {
       updateChallengeProgress(challengeId, (curr) => ({
         ...curr,
         draftBlocks: { ...version.blocks },
+        draftExecutedPrompt: version.executedPrompt,
         draftResponse: version.aiResponse,
         draftSourceMode: version.sourceMode,
+        draftProvider: version.aiProvider,
+        draftModel: version.aiModel,
         draftEvaluation: {
           ...version.evaluation,
           criteriosVerificados: [...version.evaluation.criteriosVerificados],
@@ -490,6 +740,25 @@ export function useLabStorage() {
     },
     [updateChallengeProgress]
   );
+
+  const updateConstructorDraft = useCallback(
+    (updater: (current: ConstructorDraft) => ConstructorDraft) => {
+      setState((prev) => ({
+        ...prev,
+        constructorDraft: updater(
+          prev.constructorDraft ?? createEmptyConstructorDraft()
+        ),
+      }));
+    },
+    []
+  );
+
+  const resetConstructorDraft = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      constructorDraft: createEmptyConstructorDraft(),
+    }));
+  }, []);
 
   const resetAllData = useCallback(() => {
     const fresh = createInitialState();
@@ -504,13 +773,19 @@ export function useLabStorage() {
     updateDiagnostic,
     updateDraftBlocks,
     updateDraftResponse,
+    updateDraftExecutionMeta,
     updateDraftEvaluation,
     updateCustomMeta,
     resetDraftBlocks,
     saveIterationAndRefine,
     markChallengeCompleted,
+    updateChallengeActivityState,
+    saveChallengeActivityAttempt,
     reopenChallenge,
+    prepareChallengeRetry,
     loadVersionIntoDraft,
+    updateConstructorDraft,
+    resetConstructorDraft,
     resetAllData,
   };
 }

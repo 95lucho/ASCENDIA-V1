@@ -97,184 +97,167 @@ export const CHALLENGES: ChallengeDefinition[] = [
   {
     id: "reto-1",
     orderLabel: "Reto 01",
-    title: "Desglose de un concepto académico complejo",
+    title: "Identifica las partes de una instrucción",
     level: "Básico",
     contexto:
-      "Preparar una exposición en una asignatura de Ciencias de la Educación sobre un concepto teórico denso (por ejemplo, zona de desarrollo próximo de Vygotsky, andamiaje pedagógico o evaluación formativa) a partir de bibliografía especializada.",
+      "Analiza una instrucción educativa real desglosada en fragmentos para distinguir qué parte cumple cada función.",
     objetivo:
-      "Obtener una explicación clara para nivel universitario inicial sin perder el rigor conceptual ni pedagógico.",
-    bloquesClave: [
-      "Propósito",
-      "Contexto/Nivel académico",
-      "Formato de salida",
-    ],
+      "Reconocer propósito, contexto, tarea y formato dentro de una instrucción dirigida a un sistema de IA.",
+    bloquesClave: ["Propósito", "Contexto", "Tarea", "Formato"],
+    secuencia: ["Observar", "Identificar", "Clasificar", "Comprobar"],
+    competencia:
+      "Reconocimiento de los componentes estructurales de una instrucción educativa.",
     criterios: [
-      "Especifica nivel universitario y propósito formativo",
-      "Define un formato estructurado (ej. analogía educativa + 3 ideas clave + ejemplo de aula)",
-      "Verifica que no exista distorsión conceptual por simplificación",
+      "Asocia al menos 3 de 4 fragmentos con su componente correcto",
+      "Distingue entre para qué se pide (propósito) y en qué escenario (contexto)",
+      "Revisa la retroalimentación de cada fragmento",
     ],
-    placeholders: {
-      rol: "Ej. Docente universitario de Psicología del Aprendizaje y Didáctica General especializado en formación docente.",
-      contexto:
-        "Ej. Soy estudiante de segundo semestre de Ciencias de la Educación y debo exponer el concepto de Zona de Desarrollo Próximo de Vygotsky ante compañeros de primer año a partir de nuestra bibliografía base.",
-      tarea:
-        "Ej. Explica el concepto con claridad académica, formula una analogía educativa pertinente, sintetiza 3 ideas clave y ofrece un ejemplo concreto de aula universitaria o escolar.",
-      restricciones:
-        "Ej. Evita simplificaciones que reduzcan la teoría a un simple 'trabajo en grupo'; conserva la terminología sociocultural exacta (mediación, andamiaje, nivel real y potencial) en máximo 350 palabras.",
-      formato:
-        "Ej. Estructura en 4 apartados: (1) Definición conceptual rigurosa, (2) Analogía educativa, (3) 3 ideas clave en viñetas, (4) Ejemplo práctico de aula.",
-    },
+    placeholders: { ...EMPTY_BLOCKS },
   },
   {
     id: "reto-2",
     orderLabel: "Reto 02",
-    title: "Organización de información en matrices comparativas",
+    title: "Detecta la instrucción más efectiva",
     level: "Básico",
     contexto:
-      "Repasar para un examen parcial comparando dos enfoques o modelos educativos (por ejemplo, enfoque conductista vs. constructivista, evaluación diagnóstica vs. sumativa o metodología cuantitativa vs. cualitativa en investigación educativa).",
+      "Compara tres formulaciones distintas para resolver una misma necesidad docente en educación superior.",
     objetivo:
-      "Organizar la comparación según criterios pedagógicos explícitos definidos por el estudiante.",
+      "Distinguir instrucciones claras, contextualizadas y precisas frente a pedidos vagos o incompletos.",
     bloquesClave: [
+      "Propósito claro",
+      "Contexto suficiente",
       "Tarea específica",
-      "Criterios de comparación",
-      "Formato tabular",
+      "Formato definido",
     ],
+    secuencia: ["Leer", "Comparar", "Seleccionar", "Justificar"],
+    competencia:
+      "Discriminación de instrucciones efectivas mediante criterios de claridad, contexto, precisión y formato.",
     criterios: [
-      "Define categorías exactas de comparación (ej. rol docente, rol estudiantil, tipo de evidencia, limitación)",
-      "Solicita tabla con encabezados claros",
-      "Contrasta los datos con apuntes o lecturas de la carrera",
+      "Selecciona la instrucción más efectiva para el caso",
+      "Identifica al menos 3 criterios válidos que justifican su calidad",
+      "Evita criterios incompatibles con la formulación precisa",
     ],
-    placeholders: {
-      rol: "Ej. Especialista en Teorías del Aprendizaje y Diseño Curricular universitario.",
-      contexto:
-        "Ej. Estoy preparando un examen parcial de Didáctica y necesito diferenciar con precisión el enfoque conductista frente al enfoque constructivista.",
-      tarea:
-        "Ej. Compara ambos enfoques exclusivamente según estas 5 categorías: concepción del aprendizaje, rol docente, rol estudiantil, tipo de evidencia evaluativa y principal limitación pedagógica.",
-      restricciones:
-        "Ej. Redacta celdas breves de máximo 20 palabras por criterio; no añadas categorías no solicitadas ni recomendaciones genéricas.",
-      formato:
-        "Ej. Tabla Markdown con encabezados claros (Criterio | Enfoque Conductista | Enfoque Constructivista) seguida de una síntesis de 3 líneas para el repaso.",
-    },
+    placeholders: { ...EMPTY_BLOCKS },
   },
   {
     id: "reto-3",
     orderLabel: "Reto 03",
-    title: "Tutor socrático para preparación de exámenes",
+    title: "Encuentra los errores",
     level: "Intermedio",
     contexto:
-      "Preparar una evaluación o defensa oral sobre teorías del aprendizaje, planificación curricular o diseño instruccional mediante recuperación activa.",
+      "Examina cuatro instrucciones defectuosas para diagnosticar el problema principal que limita la respuesta de la IA.",
     objetivo:
-      "Configurar a la IA con un rol de tutor/evaluador pedagógico que formule una pregunta a la vez, analice la respuesta del estudiante y no entregue la solución directa antes de que intente responder.",
-    bloquesClave: ["Rol", "Reglas por turnos", "Restricciones estrictas"],
-    criterios: [
-      "Asigna rol pedagógico y regla de una pregunta por turno",
-      "Exige retroalimentación sobre aciertos y vacíos conceptuales",
-      "Ajusta la instrucción si la IA adelanta la respuesta",
+      "Diagnosticar problemas en instrucciones dirigidas a sistemas de IA y comprender cómo afectan la calidad del resultado.",
+    bloquesClave: [
+      "Falta de contexto",
+      "Tarea ambigua",
+      "Ausencia de restricciones",
+      "Falta de formato",
     ],
-    placeholders: {
-      rol: "Ej. Tutor socrático exigente de Planificación Curricular y Diseño Instruccional en Ciencias de la Educación.",
-      contexto:
-        "Ej. Debo rendir una defensa oral sobre alineación constructiva, objetivos de aprendizaje y evaluación auténtica, y quiero entrenarme mediante recuperación activa.",
-      tarea:
-        "Ej. Formula únicamente una primera pregunta situacional de dificultad intermedia y espera mi respuesta. Cuando responda, evalúa mis aciertos, señala vacíos conceptuales y formula la siguiente pregunta.",
-      restricciones:
-        "Ej. PROHIBIDO entregar la solución directa o dar respuestas modelo antes de que yo intente responder. Realiza estrictamente UNA pregunta por turno.",
-      formato:
-        "Ej. Respuesta breve por turno: [Retroalimentación de aciertos y vacíos] + [Siguiente pregunta numerada] en máximo 6 líneas.",
-    },
+    secuencia: [
+      "Examinar",
+      "Detectar",
+      "Clasificar",
+      "Comprender cómo corregir",
+    ],
+    competencia:
+      "Diagnóstico de fallos frecuentes en instrucciones educativas y comprensión de su impacto en la salida de la IA.",
+    criterios: [
+      "Clasifica correctamente al menos 3 de las 4 instrucciones",
+      "Distingue entre ambigüedad de la tarea y ausencia de contexto o restricciones",
+      "Analiza por qué cada error deteriora la respuesta",
+    ],
+    placeholders: { ...EMPTY_BLOCKS },
   },
   {
     id: "reto-4",
     orderLabel: "Reto 04",
-    title: "Adaptación de un texto académico a guía de estudio",
+    title: "Analiza la respuesta de la IA",
     level: "Intermedio",
     contexto:
-      "Convertir un fragmento real de un artículo o capítulo sobre didáctica, inclusión educativa o tecnología educativa en una guía de estudio para compañeros de curso sin inventar información externa.",
+      "Contrasta una instrucción específica de comprensión lectora con una respuesta simulada de IA para detectar aciertos y omisiones.",
     objetivo:
-      "Procesar exclusivamente el texto proporcionado generando esquema conceptual, preguntas de reflexión pedagógica y un caso de aula.",
+      "Evaluar la correspondencia entre una instrucción y la respuesta obtenida identificando elementos cumplidos, omitidos, no correspondientes y verificables.",
     bloquesClave: [
-      "Delimitación de fuente",
-      "Restricción anti-alucinación",
-      "Estructura de salida",
+      "Cumplimiento",
+      "Omisiones",
+      "No correspondiente",
+      "Verificación",
     ],
+    secuencia: [
+      "Observar",
+      "Contrastar",
+      "Identificar omisiones",
+      "Valorar",
+    ],
+    competencia:
+      "Análisis crítico de correspondencia entre lo solicitado en una instrucción y lo entregado por la IA.",
     criterios: [
-      "Ordena basarse estrictamente en el texto suministrado",
-      "Define los 3 componentes y límites de extensión",
-      "Audita que no se incluyan conceptos ajenos al fragmento",
+      "Resuelve correctamente al menos 3 de los 4 criterios de análisis",
+      "Identifica omisiones de tiempo y pasos incompletos",
+      "Distingue información ajena y afirmaciones que requieren verificación",
     ],
-    placeholders: {
-      rol: "Ej. Especialista en elaboración de materiales didácticos con estricta fidelidad documental.",
-      contexto:
-        "Ej. Necesito adaptar el fragmento adjunto sobre Diseño Universal para el Aprendizaje (DUA) e inclusión educativa en una guía de estudio para mis compañeros de curso.",
-      tarea:
-        "Ej. Basándote EXCLUSIVAMENTE en el fragmento que incluyo entre comillas triples, elabora: (1) esquema conceptual, (2) 3 preguntas de reflexión pedagógica y (3) 1 caso práctico de aula.",
-      restricciones:
-        "Ej. Prohibido introducir autores, normativas o conceptos externos al fragmento. Si un dato no figura en el texto, indica literalmente 'No especificado en la fuente'.",
-      formato:
-        "Ej. Tres secciones delimitadas (Esquema: máx. 120 palabras; Preguntas: 3 ítems; Caso de aula: máx. 100 palabras). Texto fuente: \"\"\"[Pega aquí tu lectura]\"\"\".",
-    },
+    placeholders: { ...EMPTY_BLOCKS },
   },
   {
     id: "reto-5",
     orderLabel: "Reto 05",
-    title: "Detección de sesgos y vacíos en un borrador propio",
+    title: "Resuelve una situación problemática",
     level: "Avanzado",
     contexto:
-      "Revisar el planteamiento de un problema educativo, una justificación o un párrafo argumentativo de un trabajo académico antes de presentarlo, evitando que la IA reescriba el texto por el estudiante.",
+      "Una docente de primaria necesita una actividad participativa de 40 minutos sobre el cuidado del agua para 30 estudiantes con materiales sencillos y comprobación del aprendizaje.",
     objetivo:
-      "Obtener una revisión crítica que señale ambigüedades conceptuales, falta de sustento empírico/teórico y posibles contraargumentos pedagógicos.",
+      "Aplicar criterios de formulación y evaluación para seleccionar y justificar la alternativa más viable en una situación educativa contextualizada.",
     bloquesClave: [
-      "Criterios de calidad",
-      "Prohibición de reescritura",
-      "Diagnóstico por categorías",
+      "Pertinencia pedagógica",
+      "Viabilidad",
+      "Adecuación al tiempo",
+      "Comprobación del aprendizaje",
     ],
+    secuencia: [
+      "Comprender el caso",
+      "Establecer necesidades",
+      "Analizar alternativas",
+      "Justificar decisiones",
+    ],
+    competencia:
+      "Aplicación integral de criterios pedagógicos, temporales y evaluativos para decidir el uso adecuado de una propuesta de IA.",
     criterios: [
-      "Prohíbe explícitamente reescribir el texto del estudiante",
-      "Establece criterios de coherencia, pertinencia educativa y rigor",
-      "Documenta qué críticas acepta o descarta en la bitácora",
+      "Selecciona la alternativa coherente con las condiciones reales del caso",
+      "Justifica al menos 3 dimensiones (pertinencia, viabilidad, tiempo y comprobación)",
+      "Descarta propuestas tecnológicamente inviables o centradas solo en exposición",
     ],
-    placeholders: {
-      rol: "Ej. Evaluador de proyectos de investigación educativa y metodología pedagógica.",
-      contexto:
-        "Ej. Redacté el planteamiento del problema y la justificación de mi trabajo sobre deserción estudiantil y orientación vocacional, y quiero auditar su solidez antes de entregarlo.",
-      tarea:
-        "Ej. Evalúa mi borrador identificando por categorías: (a) ambigüedades conceptuales, (b) afirmaciones sin sustento empírico o teórico, (c) sesgos de confirmación y (d) contraargumentos pedagógicos posibles.",
-      restricciones:
-        "Ej. PROHIBIDO reescribir, parafrasear o redactar párrafos alternativos por mí. Limítate exclusivamente al diagnóstico crítico sobre el borrador entregado.",
-      formato:
-        "Ej. Lista de observaciones agrupadas en las 4 categorías, citando la frase exacta del borrador analizado en cada hallazgo. Borrador: \"\"\"[Pega tu texto]\"\"\".",
-    },
+    placeholders: { ...EMPTY_BLOCKS },
   },
   {
     id: "reto-6",
     orderLabel: "Reto 06",
-    title: "Auditoría crítica y verificación de salida con posibles errores",
+    title: "Auditoría de una experiencia con IA",
     level: "Avanzado",
     contexto:
-      "Indagar sobre autores, marcos normativos o antecedentes en Ciencias de la Educación donde los sistemas de IA suelen inventar referencias, mezclar autores o afirmar datos con exceso de seguridad.",
+      "Revisa un expediente completo con la necesidad de un docente, la instrucción que usó, la respuesta de IA y los problemas que surgieron al aplicarla.",
     objetivo:
-      "Consultar una temática educativa, contrastar la respuesta con fuentes académicas reales y formular una Versión 2 que exija transparencia epistémica y declaración explícita de incertidumbre.",
+      "Evaluar integralmente una experiencia de interacción con IA mediante seis criterios, detectar el problema principal y elegir una mejora coherente.",
     bloquesClave: [
-      "Verificación de hechos",
-      "Manejo de incertidumbre",
-      "Comparación v1 vs v2",
+      "Auditoría de 6 criterios",
+      "Detección de fallos",
+      "Propuesta de mejora",
     ],
+    secuencia: [
+      "Reconstruir",
+      "Verificar",
+      "Detectar fallos",
+      "Evaluar",
+      "Proponer mejoras",
+    ],
+    competencia:
+      "Evaluación crítica integral de experiencias con IA y formulación de mejoras metodológicas coherentes.",
     criterios: [
-      "La v2 exige no fabricar citas ni referencias y declarar incertidumbre",
-      "Identifica al menos un punto dudoso o impreciso en la v1",
-      "Evidencia mejora verificada entre versiones",
+      "Resuelve correctamente al menos 5 de los 6 criterios de auditoría",
+      "Identifica con precisión el problema principal del expediente",
+      "Selecciona una mejora coherente con las fallas detectadas",
     ],
-    placeholders: {
-      rol: "Ej. Investigador en Gestión Educativa y Políticas Educativas estricto en trazabilidad bibliográfica.",
-      contexto:
-        "Ej. Investigo antecedentes teóricos y marcos normativos sobre orientación educativa y gestión curricular en educación superior para mi marco teórico.",
-      tarea:
-        "Ej. En v1 realiza la consulta sobre autores y normas clave; en v2 exige separar con rigor lo que es consenso documentado de aquello que requiere verificación directa en fuentes oficiales.",
-      restricciones:
-        "Ej. No fabriques títulos de libros, años, artículos legales ni citas textuales. Cuando no tengas certeza verificable, declara explícitamente '[REQUIERE VERIFICACIÓN EN FUENTE PRIMARIA]'.",
-      formato:
-        "Ej. Tres bloques: (1) Conceptos teóricos verificables, (2) Afirmaciones marcadas con incertidumbre, (3) Descriptores exactos para buscar en SciELO, Redalyc o normativa oficial.",
-    },
+    placeholders: { ...EMPTY_BLOCKS },
   },
   {
     id: "reto-libre",
@@ -291,6 +274,8 @@ export const CHALLENGES: ChallengeDefinition[] = [
       "Restricciones anti-superficialidad",
       "Verificación crítica",
     ],
+    competencia:
+      "Experimentación autónoma en diseño, ejecución y evaluación crítica de instrucciones propias.",
     criterios: [
       "Define contexto disciplinar y objetivo verificable",
       "Establece restricciones claras y formato de salida",

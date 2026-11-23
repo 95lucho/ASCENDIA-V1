@@ -13,10 +13,12 @@ import {
   ChallengeStatus,
   CustomChallengeMeta,
 } from "../../types/lab";
+import { isChallengeUnlocked } from "../../utils/progression";
 
 interface ChallengeHeaderProps {
   challenge: ChallengeDefinition;
   progress: ChallengeProgress;
+  allChallengesProgress: Record<string, ChallengeProgress>;
   status: ChallengeStatus;
   displayTitle: string;
   displayObjetivo: string;
@@ -30,6 +32,7 @@ interface ChallengeHeaderProps {
 export function ChallengeHeader({
   challenge,
   progress,
+  allChallengesProgress,
   status,
   displayTitle,
   displayObjetivo,
@@ -41,8 +44,12 @@ export function ChallengeHeader({
 }: ChallengeHeaderProps) {
   const [showCriteria, setShowCriteria] = useState(false);
 
+  const canCompare =
+    progress.versions.length >= 2 ||
+    (progress.versions.length >= 1 && progress.draftResponse.trim().length > 0);
+
   return (
-    <section className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] rounded-xl p-5 sm:p-6 transition-colors">
+    <section className="bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] border-t-4 border-t-[#1E3A5F] dark:border-t-[#60A5FA] rounded-xl p-5 sm:p-6 transition-colors">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -62,14 +69,23 @@ export function ChallengeHeader({
           <select
             id="challenge-quick-switch"
             value={challenge.id}
-            onChange={(e) => onSelectChallenge(e.target.value)}
+            onChange={(e) => {
+              const targetId = e.target.value;
+              if (isChallengeUnlocked(targetId, allChallengesProgress)) {
+                onSelectChallenge(targetId);
+              }
+            }}
             className="text-xs font-medium text-[#1E3A5F] dark:text-[#F1F5F9] bg-[#F5F7FA] dark:bg-[#0F172A] border border-[#CBD5E1] dark:border-[#334155] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#1E3A5F] dark:focus:border-[#60A5FA] max-w-full sm:max-w-md"
           >
-            {CHALLENGES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.orderLabel} · {c.level} — {c.title}
-              </option>
-            ))}
+            {CHALLENGES.map((c) => {
+              const unlocked = isChallengeUnlocked(c.id, allChallengesProgress);
+              return (
+                <option key={c.id} value={c.id} disabled={!unlocked}>
+                  {c.orderLabel} · {c.level} — {c.title}
+                  {!unlocked ? " (Bloqueado)" : ""}
+                </option>
+              );
+            })}
           </select>
         </div>
 
@@ -78,9 +94,9 @@ export function ChallengeHeader({
             className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
               status === "Completado"
                 ? "text-emerald-700 dark:text-emerald-400"
-                : status === "En iteración"
+                : status === "En progreso"
                 ? "text-amber-700 dark:text-amber-400"
-                : "text-slate-500 dark:text-slate-400"
+                : "text-[#1E3A5F] dark:text-[#60A5FA]"
             }`}
           >
             {status === "Completado" && (
@@ -89,15 +105,18 @@ export function ChallengeHeader({
             <span>Estado: {status}</span>
           </span>
 
-          {progress.versions.length >= 2 && (
+          {canCompare && (
             <button
               type="button"
               onClick={onOpenComparator}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1E3A5F] dark:text-[#F1F5F9] bg-[#F5F7FA] dark:bg-[#0F172A] hover:bg-slate-200/70 dark:hover:bg-[#334155]/60 border border-[#CBD5E1] dark:border-[#334155] rounded-lg transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#1E3A5F] dark:bg-[#2B4F7E] hover:bg-[#152B47] dark:hover:bg-[#356199] rounded-lg transition-colors whitespace-nowrap shrink-0"
             >
               <Columns2 className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="tabular-nums">
-                Comparar versiones ({progress.versions.length})
+                Comparar ejecuciones (
+                {progress.versions.length +
+                  (progress.draftResponse.trim().length > 0 ? 1 : 0)}
+                )
               </span>
             </button>
           )}
@@ -108,10 +127,7 @@ export function ChallengeHeader({
             aria-expanded={showCriteria}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1E3A5F] dark:text-[#F1F5F9] bg-white dark:bg-[#0F172A] hover:bg-[#F5F7FA] dark:hover:bg-[#334155]/60 border border-[#CBD5E1] dark:border-[#334155] rounded-lg transition-colors whitespace-nowrap shrink-0"
           >
-            <span className="tabular-nums">
-              Criterios de evaluación ({verifiedCriteriaCount}/
-              {challenge.criterios.length})
-            </span>
+            <span>Guía del reto</span>
             {showCriteria ? (
               <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
             ) : (
@@ -210,7 +226,7 @@ export function ChallengeHeader({
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               <span className="font-semibold text-slate-700 dark:text-[#F1F5F9]">
-                Bloques clave:
+                {challenge.esLibre ? "Bloques clave:" : "Dimensiones clave:"}
               </span>{" "}
               {challenge.bloquesClave.join(" · ")}
             </p>

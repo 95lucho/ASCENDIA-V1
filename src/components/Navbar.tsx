@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Award,
+  Blocks,
   BookOpen,
   Check,
   ChevronDown,
@@ -46,19 +47,19 @@ const NAV_ITEMS: {
   {
     id: "retos",
     label: "Banco de Retos",
-    subtitle: "6 retos en Ciencias de la Educación",
+    subtitle: "6 retos progresivos y Reto Libre",
     icon: BookOpen,
   },
   {
     id: "mesa",
-    label: "Mesa de Trabajo",
-    subtitle: "Constructor por bloques e iteración",
+    label: "Actividad del Reto",
+    subtitle: "Espacio del reto activo o Reto Libre",
     icon: Wrench,
   },
   {
     id: "bitacora",
     label: "Portafolio de Iteraciones",
-    subtitle: "Historial de versiones y exportación",
+    subtitle: "Historial de resultados y exportación",
     icon: FolderKanban,
   },
 ];
@@ -133,11 +134,6 @@ export function Navbar({
     onOpenGuide();
   };
 
-  const handleToggleThemeFromMenu = () => {
-    setMenuOpen(false);
-    onToggleTheme();
-  };
-
   const handleOpenCreditsFromMenu = () => {
     setMenuOpen(false);
     onOpenCredits();
@@ -145,16 +141,21 @@ export function Navbar({
 
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-[#1E293B] border-b border-[#CBD5E1] dark:border-[#334155] transition-colors">
+      {/* Cinta superior institucional UAGRM */}
+      <div
+        aria-hidden="true"
+        className="h-1 w-full bg-gradient-to-r from-[#1E3A5F] via-[#1E3A5F] to-[#8B1E24]"
+      />
       <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="min-h-16 py-2 sm:py-0 flex items-center justify-between gap-3">
-          {/* Izquierda: Identidad ASCENDIA + SAO, estudiante activo y estado de guardado */}
+          {/* Izquierda: Identidad ASCENDIA + SAÓ, estudiante activo y estado de guardado */}
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1.5 min-w-0">
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={onOpenGuide}
-                title="Abrir Guía de SAO"
-                aria-label="Abrir Guía de SAO"
+                title="Abrir Guía de SAÓ"
+                aria-label="Abrir Guía de SAÓ"
                 className="w-8 h-7 sm:w-9 sm:h-8 flex items-center justify-center rounded-md hover:bg-[#F5F7FA] dark:hover:bg-[#0F172A] transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA]"
               >
                 <SaoAvatar className="w-8 sm:w-9" />
@@ -162,7 +163,7 @@ export function Navbar({
               <button
                 type="button"
                 onClick={() => onNavigate("inicio")}
-                className="font-display text-base sm:text-lg font-bold tracking-tight text-[#1E3A5F] dark:text-[#F1F5F9] whitespace-nowrap shrink-0 hover:text-[#8B1E24] dark:hover:text-[#60A5FA] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA] rounded"
+                className="font-display text-base sm:text-lg font-bold tracking-tight text-[#1E3A5F] dark:text-[#F1F5F9] whitespace-nowrap shrink-0 hover:text-[#8B1E24] dark:hover:text-[#F87171] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA] rounded"
               >
                 ASCENDIA
               </button>
@@ -244,34 +245,64 @@ export function Navbar({
             </div>
           </div>
 
-          {/* Derecha: Único botón desplegable de navegación y acciones */}
-          <div ref={dropdownRef} className="relative shrink-0">
+          {/* Derecha: Botón visible de Modo Claro/Oscuro + Botón único de Menú */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
-              ref={menuButtonRef}
               type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-              aria-controls="ascendia-main-menu"
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition-colors whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA] ${
-                menuOpen
-                  ? "bg-[#1E3A5F] dark:bg-[#2B4F7E] text-white border-[#1E3A5F] dark:border-[#60A5FA]"
-                  : "bg-[#F5F7FA] dark:bg-[#0F172A] text-[#1E3A5F] dark:text-[#F1F5F9] border-[#CBD5E1] dark:border-[#334155] hover:border-[#1E3A5F] dark:hover:border-[#60A5FA] hover:bg-slate-200/60 dark:hover:bg-[#334155]/60"
-              }`}
+              onClick={onToggleTheme}
+              aria-pressed={isDark}
+              aria-label={
+                isDark ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"
+              }
+              title={isDark ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg border border-[#CBD5E1] dark:border-[#334155] bg-[#F5F7FA] dark:bg-[#0F172A] hover:border-[#1E3A5F] dark:hover:border-[#60A5FA] hover:bg-slate-200/60 dark:hover:bg-[#334155]/60 text-xs font-semibold text-[#1E3A5F] dark:text-[#F1F5F9] transition-colors whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA]"
             >
-              {menuOpen ? (
-                <X className="w-4 h-4 shrink-0" aria-hidden="true" />
+              {isDark ? (
+                <>
+                  <Sun
+                    className="w-4 h-4 text-amber-400 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span className="hidden sm:inline">Modo Claro</span>
+                </>
               ) : (
-                <Menu className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <>
+                  <Moon
+                    className="w-4 h-4 text-[#1E3A5F] shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span className="hidden sm:inline">Modo Oscuro</span>
+                </>
               )}
-              <span>Menú</span>
-              <ChevronDown
-                className={`w-4 h-4 shrink-0 transition-transform duration-150 ${
-                  menuOpen ? "rotate-180" : ""
-                }`}
-                aria-hidden="true"
-              />
             </button>
+
+            <div ref={dropdownRef} className="relative shrink-0">
+              <button
+                ref={menuButtonRef}
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                aria-controls="ascendia-main-menu"
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition-colors whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA] ${
+                  menuOpen
+                    ? "bg-[#8B1E24] dark:bg-[#C93B44] text-white border-[#8B1E24] dark:border-[#C93B44]"
+                    : "bg-[#1E3A5F] dark:bg-[#2B4F7E] text-white border-[#1E3A5F] dark:border-[#60A5FA]/60 hover:bg-[#152B47] dark:hover:bg-[#356199]"
+                }`}
+              >
+                {menuOpen ? (
+                  <X className="w-4 h-4 shrink-0" aria-hidden="true" />
+                ) : (
+                  <Menu className="w-4 h-4 shrink-0" aria-hidden="true" />
+                )}
+                <span>Menú</span>
+                <ChevronDown
+                  className={`w-4 h-4 shrink-0 transition-transform duration-150 ${
+                    menuOpen ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
 
             {menuOpen && (
               <div
@@ -345,6 +376,24 @@ export function Navbar({
                   <button
                     type="button"
                     role="menuitem"
+                    aria-current={activeView === "constructor" ? "page" : undefined}
+                    onClick={() => handleSelectView("constructor")}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA] ${
+                      activeView === "constructor"
+                        ? "bg-[#1E3A5F]/10 dark:bg-[#2B4F7E]/30 text-[#1E3A5F] dark:text-[#60A5FA]"
+                        : "text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#F5F7FA] dark:hover:bg-[#0F172A]"
+                    }`}
+                  >
+                    <Blocks
+                      className="w-4 h-4 text-[#1E3A5F] dark:text-[#60A5FA] shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="flex-1">Constructor por Bloques</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
                     onClick={handleOpenGuideFromMenu}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-sm font-medium text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#F5F7FA] dark:hover:bg-[#0F172A] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA]"
                   >
@@ -352,36 +401,11 @@ export function Navbar({
                       className="w-4 h-4 text-[#8B1E24] dark:text-[#F87171] shrink-0"
                       aria-hidden="true"
                     />
-                    <span className="flex-1">Guía de SAO</span>
+                    <span className="flex-1">Guía de SAÓ</span>
                     <Compass
                       className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0"
                       aria-hidden="true"
                     />
-                  </button>
-
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleToggleThemeFromMenu}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-sm font-medium text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#F5F7FA] dark:hover:bg-[#0F172A] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:focus-visible:outline-[#60A5FA]"
-                  >
-                    {isDark ? (
-                      <Sun
-                        className="w-4 h-4 text-amber-400 shrink-0"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <Moon
-                        className="w-4 h-4 text-[#1E3A5F] shrink-0"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span className="flex-1">
-                      {isDark ? "Modo Claro" : "Modo Oscuro"}
-                    </span>
-                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                      {isDark ? "Activo: Oscuro" : "Activo: Claro"}
-                    </span>
                   </button>
 
                   <button
@@ -412,6 +436,7 @@ export function Navbar({
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

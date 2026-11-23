@@ -13,7 +13,7 @@ export function SaoAvatar({ className = "", floating = false }: SaoAvatarProps) 
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         role="img"
-        aria-label="Avatar SAO, sombrero de saó cruceño guía de ASCENDIA"
+        aria-label="Avatar SAÓ, sombrero de saó cruceño guía de ASCENDIA"
         className="w-full h-auto max-w-[160px]"
       >
         {/* Sombra suave inferior */}
@@ -82,7 +82,7 @@ export function SaoAvatar({ className = "", floating = false }: SaoAvatarProps) 
         />
         <path d="M62 98C86 105 134 105 158 98" stroke="#8B1E24" strokeWidth="3.5" />
 
-        {/* Rostro amigable de SAO en la copa */}
+        {/* Rostro amigable de SAÓ en la copa */}
         {/* Cejas */}
         <path
           d="M86 58C90 55 96 55 99 58"

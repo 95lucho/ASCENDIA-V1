@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { getChallengeStatus } from "../hooks/useLabStorage";
 import {
+  ChallengeActivityResult,
   ChallengeDefinition,
   ChallengeProgress,
   CriticalEvaluation,
@@ -9,6 +9,13 @@ import {
   PromptBlocks,
 } from "../types/lab";
 import { assemblePrompt, evaluateCompleteness } from "../utils/promptBuilder";
+import { resolveChallengeStatus } from "../utils/progression";
+import { Challenge1IdentifyParts } from "./challenges/Challenge1IdentifyParts";
+import { Challenge2DetectEffective } from "./challenges/Challenge2DetectEffective";
+import { Challenge3FindErrors } from "./challenges/Challenge3FindErrors";
+import { Challenge4AnalyzeResponse } from "./challenges/Challenge4AnalyzeResponse";
+import { Challenge5SolveCase } from "./challenges/Challenge5SolveCase";
+import { Challenge6AuditExperience } from "./challenges/Challenge6AuditExperience";
 import { AiExecutionPanel } from "./workbench/AiExecutionPanel";
 import { ChallengeHeader } from "./workbench/ChallengeHeader";
 import { CriticalEvaluationPanel } from "./workbench/CriticalEvaluationPanel";
@@ -18,13 +25,21 @@ import { VersionComparatorModal } from "./workbench/VersionComparatorModal";
 interface WorkbenchViewProps {
   challenge: ChallengeDefinition;
   progress: ChallengeProgress;
+  allChallengesProgress: Record<string, ChallengeProgress>;
   onSelectChallenge: (id: string) => void;
   onBackToBank: () => void;
   onUpdateBlocks: (blocks: PromptBlocks) => void;
   onUpdateResponse: (
     response: string,
-    sourceMode?: "live_gemini" | "manual"
+    sourceMode?: "live_gemini" | "manual",
+    meta?: { provider?: string; model?: string; executedPrompt?: string }
   ) => void;
+  onUpdateExecutionMeta: (meta: {
+    executedPrompt?: string;
+    provider?: string;
+    model?: string;
+    sourceMode?: "live_gemini" | "manual";
+  }) => void;
   onUpdateEvaluation: (evaluation: CriticalEvaluation) => void;
   onUpdateCustomMeta: (meta: CustomChallengeMeta) => void;
   onResetBlocks: () => void;
@@ -33,15 +48,23 @@ interface WorkbenchViewProps {
   onReopenChallenge: () => void;
   onLoadVersion: (version: IterationVersion) => void;
   onGoToPortfolio: () => void;
+  onSaveActivityState: (activityState: Record<string, unknown>) => void;
+  onAttemptActivityEvaluated: (
+    activityState: Record<string, unknown>,
+    result: ChallengeActivityResult
+  ) => void;
+  onResetStructuredActivity: () => void;
 }
 
 export function WorkbenchView({
   challenge,
   progress,
+  allChallengesProgress,
   onSelectChallenge,
   onBackToBank,
   onUpdateBlocks,
   onUpdateResponse,
+  onUpdateExecutionMeta,
   onUpdateEvaluation,
   onUpdateCustomMeta,
   onResetBlocks,
@@ -50,6 +73,9 @@ export function WorkbenchView({
   onReopenChallenge,
   onLoadVersion,
   onGoToPortfolio,
+  onSaveActivityState,
+  onAttemptActivityEvaluated,
+  onResetStructuredActivity,
 }: WorkbenchViewProps) {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -65,12 +91,15 @@ export function WorkbenchView({
   }, [challenge.id]);
 
   const currentVersionNumber = progress.versions.length + 1;
-  const status = getChallengeStatus(progress);
+  const status = resolveChallengeStatus(challenge.id, allChallengesProgress);
 
   const assembledPrompt = useMemo(
     () => assemblePrompt(progress.draftBlocks),
     [progress.draftBlocks]
   );
+
+  const effectiveDraftPrompt =
+    progress.draftExecutedPrompt?.trim() || assembledPrompt;
 
   const completeness = useMemo(
     () => evaluateCompleteness(progress.draftBlocks),
@@ -89,6 +118,34 @@ export function WorkbenchView({
       ? progress.customMeta.objetivo
       : challenge.objetivo;
 
+  const currentDraftAsVersion: IterationVersion | null = useMemo(() => {
+    if (!progress.draftResponse.trim()) return null;
+    return {
+      id: `${challenge.id}-draft`,
+      versionNumber: currentVersionNumber,
+      createdAt: new Date().toISOString(),
+      blocks: progress.draftBlocks,
+      assembledPrompt,
+      executedPrompt: effectiveDraftPrompt,
+      aiResponse: progress.draftResponse,
+      sourceMode: progress.draftSourceMode,
+      aiProvider: progress.draftProvider,
+      aiModel: progress.draftModel,
+      evaluation: progress.draftEvaluation,
+    };
+  }, [
+    challenge.id,
+    currentVersionNumber,
+    progress.draftBlocks,
+    assembledPrompt,
+    effectiveDraftPrompt,
+    progress.draftResponse,
+    progress.draftSourceMode,
+    progress.draftProvider,
+    progress.draftModel,
+    progress.draftEvaluation,
+  ]);
+
   const handleBlockChange = (key: keyof PromptBlocks, value: string) => {
     setValidationError(null);
     setActionSuccess(null);
@@ -98,14 +155,12 @@ export function WorkbenchView({
     });
   };
 
-  const validateEvaluationForm = (
-    requireAllCriteria: boolean
-  ): string | null => {
-    if (!assembledPrompt.trim()) {
-      return "Debes redactar al menos los bloques esenciales del prompt en la columna izquierda.";
+  const validateEvaluationForm = (): string | null => {
+    if (!effectiveDraftPrompt.trim()) {
+      return "Primero escribe o arma tu instrucción antes de guardar en la bitácora.";
     }
     if (!progress.draftResponse.trim()) {
-      return "Debes probar el prompt en vivo o pegar la respuesta obtenida de la IA antes de registrar la evaluación.";
+      return "Primero prueba tu instrucción con la IA (o pega la respuesta externa) para poder evaluarla.";
     }
     const ev = progress.draftEvaluation;
     if (
@@ -113,19 +168,22 @@ export function WorkbenchView({
       !ev.alucinacionesOSesgos ||
       !ev.nivelYFormatoAdecuados
     ) {
-      return "Responde las 3 preguntas de diagnóstico crítico sobre la salida obtenida.";
+      return "Responde las 3 preguntas sencillas sobre la respuesta de la IA.";
     }
-    if (ev.notasReflexion.trim().length < 10) {
-      return "Escribe una reflexión en la bitácora (mínimo 10 caracteres) indicando qué hallaste o qué ajustarás.";
+
+    if (!(ev.cambiosInstruccion ?? "").trim()) {
+      return "Escribe brevemente qué cambiarías en tu instrucción para obtener una mejor respuesta.";
     }
-    if (requireAllCriteria && !ev.criteriosVerificados.every(Boolean)) {
-      return `Para marcar el reto como completado, verifica y marca los ${challenge.criterios.length} criterios de evaluación del reto.`;
+
+    if (!ev.notasReflexion.trim()) {
+      return "Escribe brevemente qué aprendiste de esta prueba para guardarlo en tu bitácora.";
     }
+
     return null;
   };
 
   const handleSaveIteration = () => {
-    const err = validateEvaluationForm(false);
+    const err = validateEvaluationForm();
     if (err) {
       setValidationError(err);
       return;
@@ -134,7 +192,7 @@ export function WorkbenchView({
     const saved = onSaveIteration();
     if (saved) {
       setActionSuccess(
-        `Versión ${saved.versionNumber} guardada en bitácora. Ahora estás refinando la Versión ${
+        `Prueba ${saved.versionNumber} guardada en tu bitácora. Ya puedes mejorar tu instrucción para la prueba ${
           saved.versionNumber + 1
         }.`
       );
@@ -144,28 +202,24 @@ export function WorkbenchView({
   const handleMarkComplete = () => {
     const hasSavedVersion = progress.versions.length > 0;
     const hasCurrentDraft =
-      assembledPrompt.trim().length > 0 &&
+      effectiveDraftPrompt.trim().length > 0 &&
       progress.draftResponse.trim().length > 0;
 
     if (hasCurrentDraft) {
-      const err = validateEvaluationForm(true);
+      const err = validateEvaluationForm();
       if (err) {
         setValidationError(err);
         return;
       }
       setValidationError(null);
       onCompleteChallenge(true);
-      setActionSuccess("Reto verificado y marcado como Completado.");
+      setActionSuccess(
+        "Evaluación guardada en tu bitácora y reto marcado como Completado."
+      );
       return;
     }
 
     if (hasSavedVersion) {
-      if (!progress.draftEvaluation.criteriosVerificados.every(Boolean)) {
-        setValidationError(
-          `Verifica y marca los ${challenge.criterios.length} criterios de evaluación antes de completar el reto.`
-        );
-        return;
-      }
       setValidationError(null);
       onCompleteChallenge(false);
       setActionSuccess("Reto marcado como Completado.");
@@ -173,14 +227,16 @@ export function WorkbenchView({
     }
 
     setValidationError(
-      "Completa al menos una iteración con respuesta y evaluación crítica antes de cerrar el reto."
+      "Prueba tu instrucción, evalúa el resultado y registra lo que aprendiste antes de completar el reto."
     );
   };
 
   const openComparator = () => {
-    if (progress.versions.length >= 2) {
+    const totalComparable =
+      progress.versions.length + (currentDraftAsVersion ? 1 : 0);
+    if (totalComparable >= 2) {
       setCompareLeftIdx(0);
-      setCompareRightIdx(progress.versions.length - 1);
+      setCompareRightIdx(totalComparable - 1);
       setShowCompareModal(true);
     }
   };
@@ -197,12 +253,71 @@ export function WorkbenchView({
     });
   };
 
-  const toggleCriterion = (index: number) => {
-    setValidationError(null);
-    setActionSuccess(null);
-    const next = [...progress.draftEvaluation.criteriosVerificados];
-    next[index] = !next[index];
-    updateEvalField("criteriosVerificados", next);
+  const renderStructuredChallenge = () => {
+    switch (challenge.id) {
+      case "reto-1":
+        return (
+          <Challenge1IdentifyParts
+            challenge={challenge}
+            progress={progress}
+            onSaveDraftState={onSaveActivityState}
+            onAttemptEvaluated={onAttemptActivityEvaluated}
+            onResetActivity={onResetStructuredActivity}
+          />
+        );
+      case "reto-2":
+        return (
+          <Challenge2DetectEffective
+            challenge={challenge}
+            progress={progress}
+            onSaveDraftState={onSaveActivityState}
+            onAttemptEvaluated={onAttemptActivityEvaluated}
+            onResetActivity={onResetStructuredActivity}
+          />
+        );
+      case "reto-3":
+        return (
+          <Challenge3FindErrors
+            challenge={challenge}
+            progress={progress}
+            onSaveDraftState={onSaveActivityState}
+            onAttemptEvaluated={onAttemptActivityEvaluated}
+            onResetActivity={onResetStructuredActivity}
+          />
+        );
+      case "reto-4":
+        return (
+          <Challenge4AnalyzeResponse
+            challenge={challenge}
+            progress={progress}
+            onSaveDraftState={onSaveActivityState}
+            onAttemptEvaluated={onAttemptActivityEvaluated}
+            onResetActivity={onResetStructuredActivity}
+          />
+        );
+      case "reto-5":
+        return (
+          <Challenge5SolveCase
+            challenge={challenge}
+            progress={progress}
+            onSaveDraftState={onSaveActivityState}
+            onAttemptEvaluated={onAttemptActivityEvaluated}
+            onResetActivity={onResetStructuredActivity}
+          />
+        );
+      case "reto-6":
+        return (
+          <Challenge6AuditExperience
+            challenge={challenge}
+            progress={progress}
+            onSaveDraftState={onSaveActivityState}
+            onAttemptEvaluated={onAttemptActivityEvaluated}
+            onResetActivity={onResetStructuredActivity}
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -210,6 +325,7 @@ export function WorkbenchView({
       <ChallengeHeader
         challenge={challenge}
         progress={progress}
+        allChallengesProgress={allChallengesProgress}
         status={status}
         displayTitle={displayTitle}
         displayObjetivo={displayObjetivo}
@@ -220,66 +336,74 @@ export function WorkbenchView({
         onOpenComparator={openComparator}
       />
 
-      {/* Mesa de trabajo en 2 columnas equilibradas */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <PromptBlockBuilder
-          challenge={challenge}
-          currentVersionNumber={currentVersionNumber}
-          draftBlocks={progress.draftBlocks}
-          versions={progress.versions}
-          assembledPrompt={assembledPrompt}
-          completeness={completeness}
-          onBlockChange={handleBlockChange}
-          onResetBlocks={() => {
-            setValidationError(null);
-            setActionSuccess(null);
-            onResetBlocks();
-          }}
-          onLoadVersion={(ver) => {
-            setValidationError(null);
-            setActionSuccess(
-              `Se cargó la Versión ${ver.versionNumber} en el borrador actual para revisión o ajuste.`
-            );
-            onLoadVersion(ver);
-          }}
-        />
-
-        <section className="lg:col-span-6 bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] rounded-xl p-5 sm:p-6 space-y-6 transition-colors">
-          <AiExecutionPanel
-            challengeId={challenge.id}
-            challengeTitle={displayTitle}
-            currentVersionNumber={currentVersionNumber}
-            assembledPrompt={assembledPrompt}
-            draftResponse={progress.draftResponse}
-            draftSourceMode={progress.draftSourceMode}
-            onUpdateResponse={onUpdateResponse}
-            onClearValidationError={() => setValidationError(null)}
-          />
-
-          <CriticalEvaluationPanel
+      {challenge.esLibre ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <PromptBlockBuilder
             challenge={challenge}
-            evaluation={progress.draftEvaluation}
             currentVersionNumber={currentVersionNumber}
-            completed={progress.completed}
-            validationError={validationError}
-            actionSuccess={actionSuccess}
-            onUpdateField={updateEvalField}
-            onToggleCriterion={toggleCriterion}
-            onSaveIteration={handleSaveIteration}
-            onMarkComplete={handleMarkComplete}
-            onReopenChallenge={() => {
+            draftBlocks={progress.draftBlocks}
+            versions={progress.versions}
+            assembledPrompt={assembledPrompt}
+            completeness={completeness}
+            onBlockChange={handleBlockChange}
+            onResetBlocks={() => {
               setValidationError(null);
               setActionSuccess(null);
-              onReopenChallenge();
+              onResetBlocks();
             }}
-            onGoToPortfolio={onGoToPortfolio}
+            onLoadVersion={(ver) => {
+              setValidationError(null);
+              setActionSuccess(
+                `Se cargó la Versión ${ver.versionNumber} en el borrador actual para revisión o ajuste.`
+              );
+              onLoadVersion(ver);
+            }}
           />
-        </section>
-      </div>
+
+          <section className="lg:col-span-6 bg-white dark:bg-[#1E293B] border border-[#CBD5E1] dark:border-[#334155] border-t-4 border-t-[#8B1E24] dark:border-t-[#F87171] rounded-xl p-5 sm:p-6 space-y-6 transition-colors">
+            <AiExecutionPanel
+              challengeId={challenge.id}
+              challengeTitle={displayTitle}
+              currentVersionNumber={currentVersionNumber}
+              versionsCount={progress.versions.length}
+              assembledPrompt={assembledPrompt}
+              draftExecutedPrompt={progress.draftExecutedPrompt}
+              draftResponse={progress.draftResponse}
+              draftSourceMode={progress.draftSourceMode}
+              draftProvider={progress.draftProvider}
+              draftModel={progress.draftModel}
+              onUpdateResponse={onUpdateResponse}
+              onUpdateExecutionMeta={onUpdateExecutionMeta}
+              onClearValidationError={() => setValidationError(null)}
+              onOpenComparator={openComparator}
+            />
+
+            <CriticalEvaluationPanel
+              evaluation={progress.draftEvaluation}
+              currentVersionNumber={currentVersionNumber}
+              completed={progress.completed}
+              validationError={validationError}
+              actionSuccess={actionSuccess}
+              onUpdateField={updateEvalField}
+              onSaveIteration={handleSaveIteration}
+              onMarkComplete={handleMarkComplete}
+              onReopenChallenge={() => {
+                setValidationError(null);
+                setActionSuccess(null);
+                onReopenChallenge();
+              }}
+              onGoToPortfolio={onGoToPortfolio}
+            />
+          </section>
+        </div>
+      ) : (
+        renderStructuredChallenge()
+      )}
 
       <VersionComparatorModal
         open={showCompareModal}
         versions={progress.versions}
+        currentDraft={currentDraftAsVersion}
         leftIdx={compareLeftIdx}
         rightIdx={compareRightIdx}
         onChangeLeftIdx={setCompareLeftIdx}
